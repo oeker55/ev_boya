@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bianca Stella Ev Renk Simülatörü</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+    <script type="module" src="./src/app.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>Ev Renk Simülatörü</h1>
+            <p>Bianca Stella kartela</p>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <button class="button" id="downloadButton" type="button">
+            <i data-lucide="download" aria-hidden="true"></i>
+            <span>PNG indir</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="preview-panel" aria-label="Ev önizleme">
+          <div class="preview-toolbar">
+            <div class="photo-meta">
+              <span id="photoName">Varsayılan önizleme</span>
+              <strong id="canvasSize">1200 x 1600</strong>
+            </div>
+            <div class="toolbar-buttons">
+              <label class="switch">
+                <input id="originalToggle" type="checkbox" />
+                <span>Orijinal</span>
+              </label>
+              <label class="switch">
+                <input id="maskToggle" type="checkbox" />
+                <span>Maske</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="stage-wrap">
+            <canvas id="paintCanvas" aria-label="Boyanmış ev görüntüsü"></canvas>
+          </div>
+        </section>
+
+        <aside class="control-panel" aria-label="Renk ve maske kontrolleri">
+          <section class="control-section current-section">
+            <div class="section-heading">
+              <span>Seçili renk</span>
+              <a id="sourceLink" href="https://biancastella.com.tr/kartela/" target="_blank" rel="noreferrer">
+                Kartela
+              </a>
+            </div>
+            <div class="current-color">
+              <span id="currentSwatch" class="current-swatch"></span>
+              <div>
+                <h2 id="currentName">Kum Beji</h2>
+                <p>
+                  <span id="currentCode">Kod</span>
+                  <span id="currentHex">#000000</span>
+                </p>
+              </div>
+            </div>
+            <div class="step-row">
+              <button class="icon-button" id="prevButton" type="button" aria-label="Önceki renk">
+                <i data-lucide="chevron-left" aria-hidden="true"></i>
+              </button>
+              <button class="button button-wide" id="playButton" type="button">
+                <i data-lucide="play" aria-hidden="true"></i>
+                <span>Tek tek uygula</span>
+              </button>
+              <button class="icon-button" id="nextButton" type="button" aria-label="Sonraki renk">
+                <i data-lucide="chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+            <label class="range-field">
+              <span>Geçiş hızı</span>
+              <input id="speedRange" type="range" min="300" max="2400" step="100" value="900" />
+            </label>
+          </section>
+
+          <section class="control-section">
+            <div class="section-heading">
+              <span>Cephe alanları</span>
+              <button class="link-button" id="resetMaskButton" type="button">
+                <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+                Sıfırla
+              </button>
+            </div>
+            <div id="areaToggles" class="area-toggles"></div>
+            <label class="range-field">
+              <span>Boya yoğunluğu</span>
+              <input id="opacityRange" type="range" min="20" max="95" step="1" value="72" />
+            </label>
+            <div class="edit-row">
+              <label class="switch">
+                <input id="editMaskToggle" type="checkbox" />
+                <span>Maskeyi düzenle</span>
+              </label>
+              <select id="editAreaSelect" aria-label="Düzenlenecek alan"></select>
+            </div>
+            <div class="edit-tools" aria-label="Maske nokta araçları">
+              <button class="icon-button" id="moveTargetButton" type="button" aria-label="Seçili alanı taşı" title="Seçili alanı taşı">
+                <i data-lucide="move" aria-hidden="true"></i>
+              </button>
+              <button
+                class="icon-button"
+                id="addHoleButton"
+                type="button"
+                aria-label="Boyanmayacak alan ekle"
+                title="Boyanmayacak alan ekle"
+              >
+                <i data-lucide="square-plus" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" id="addPointButton" type="button" aria-label="Nokta ekle" title="Nokta ekle">
+                <i data-lucide="plus" aria-hidden="true"></i>
+              </button>
+              <button
+                class="icon-button"
+                id="deletePointButton"
+                type="button"
+                aria-label="Seçili noktayı sil"
+                title="Seçili noktayı sil"
+              >
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+              </button>
+              <button
+                class="icon-button"
+                id="deleteHoleButton"
+                type="button"
+                aria-label="Seçili boyanmayacak alanı sil"
+                title="Seçili boyanmayacak alanı sil"
+              >
+                <i data-lucide="square-x" aria-hidden="true"></i>
+              </button>
+              <button
+                class="icon-button"
+                id="copyPositionButton"
+                type="button"
+                aria-label="Konumu kopyala"
+                title="Konumu kopyala"
+              >
+                <i data-lucide="copy" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="edit-tools" aria-label="Maske çizim araçları">
+              <button
+                class="icon-button"
+                id="drawPaintButton"
+                type="button"
+                aria-label="Boya alanı çiz"
+                title="Boya alanı çiz"
+              >
+                <i data-lucide="pencil" aria-hidden="true"></i>
+              </button>
+              <button
+                class="icon-button"
+                id="drawHoleButton"
+                type="button"
+                aria-label="Boyanmayacak alan çiz"
+                title="Boyanmayacak alan çiz"
+              >
+                <i data-lucide="scissors" aria-hidden="true"></i>
+              </button>
+              <button
+                class="icon-button"
+                id="finishDrawButton"
+                type="button"
+                aria-label="Çizimi bitir"
+                title="Çizimi bitir"
+              >
+                <i data-lucide="check" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" id="cancelDrawButton" type="button" aria-label="Çizimi iptal et" title="Çizimi iptal et">
+                <i data-lucide="x" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" id="clearMaskButton" type="button" aria-label="Maskeyi temizle" title="Maskeyi temizle">
+                <i data-lucide="eraser" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" id="exportMaskButton" type="button" aria-label="Maskeyi kopyala" title="Maskeyi kopyala">
+                <i data-lucide="clipboard" aria-hidden="true"></i>
+              </button>
+            </div>
+            <output id="targetPosition" class="target-position">x 0 · y 0 · w 0 · h 0</output>
+          </section>
+
+          <section class="control-section palette-section">
+            <div class="section-heading">
+              <span>Renkler</span>
+              <strong id="resultCount">0</strong>
+            </div>
+            <div class="filters">
+              <label class="search-field">
+                <i data-lucide="search" aria-hidden="true"></i>
+                <input id="searchInput" type="search" placeholder="Renk, kod veya hex ara" autocomplete="off" />
+              </label>
+              <select id="familySelect" aria-label="Renk serisi"></select>
+            </div>
+            <div id="swatchGrid" class="swatch-grid" aria-label="Bianca Stella renkleri"></div>
+          </section>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>

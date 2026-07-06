@@ -1,0 +1,16 @@
+{
+  "name": "bianca-house-color-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "start": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "test": "playwright test tests/smoke.spec.js --project=chrome --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "vite": "^7.0.2"
+  }
+}
