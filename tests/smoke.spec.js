@@ -34,5 +34,11 @@ test("renders palette and painted canvas", async ({ page }) => {
   expect(canvasStats.coloredPixels).toBeGreaterThan(100);
   expect(pageErrors).toEqual([]);
 
+  await page.locator("#editMaskToggle").check();
+  await expect(page.locator("#maskToggle")).toBeChecked();
+  await page.locator("#maskToggle").uncheck();
+  await expect(page.locator("#editMaskToggle")).not.toBeChecked();
+  await expect(page.locator("#paintCanvas")).not.toHaveClass(/is-editing/);
+
   await page.screenshot({ path: "test-results/smoke.png", fullPage: true });
 });

@@ -129,11 +129,13 @@ const state = {
   showMask: false,
   editMode: false,
   editAreaId: "main|outer",
-  opacity: 0.72,
+  opacity: 1,
   speed: 900,
   isPlaying: false,
   moveMode: false,
   activePoint: null,
+  hoverPoint: null,
+  pointerPosition: null,
   draft: null,
   drag: null,
 };
@@ -250,6 +252,11 @@ function wireControls() {
 
   dom.maskToggle.addEventListener("change", () => {
     state.showMask = dom.maskToggle.checked;
+    if (!state.showMask) {
+      state.editMode = false;
+      dom.editMaskToggle.checked = false;
+      resetEditInteraction();
+    }
     renderCanvas();
   });
 
@@ -272,20 +279,20 @@ function wireControls() {
 
   dom.editMaskToggle.addEventListener("change", () => {
     state.editMode = dom.editMaskToggle.checked;
-    state.showMask = state.showMask || state.editMode;
-    state.activePoint = null;
-    state.moveMode = false;
-    state.draft = null;
+    state.showMask = state.editMode;
+    resetEditInteraction();
     dom.maskToggle.checked = state.showMask;
-    dom.canvas.classList.toggle("is-editing", state.editMode);
     renderCanvas();
   });
 
   dom.editAreaSelect.addEventListener("change", () => {
     state.editAreaId = dom.editAreaSelect.value;
     state.activePoint = null;
+    state.hoverPoint = null;
+    state.pointerPosition = null;
     state.moveMode = false;
     state.draft = null;
+    updateCanvasCursor();
     renderCanvas();
   });
 
@@ -293,6 +300,8 @@ function wireControls() {
     if (!state.editMode) return;
     state.moveMode = !state.moveMode;
     state.activePoint = null;
+    state.hoverPoint = null;
+    updateCanvasCursor();
     renderCanvas();
   });
 
@@ -341,6 +350,8 @@ function wireControls() {
     state.masks = [];
     state.editAreaId = "";
     state.activePoint = null;
+    state.hoverPoint = null;
+    state.pointerPosition = null;
     state.moveMode = false;
     state.draft = null;
     saveMasks();
@@ -382,6 +393,7 @@ function wireControls() {
   dom.canvas.addEventListener("pointermove", moveMaskPoint);
   dom.canvas.addEventListener("pointerup", endMaskDrag);
   dom.canvas.addEventListener("pointercancel", endMaskDrag);
+  dom.canvas.addEventListener("pointerleave", leaveCanvas);
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
@@ -752,7 +764,7 @@ function renderCanvas() {
     paintMasks();
   }
 
-  if (state.showMask || state.editMode) {
+  if (state.showMask) {
     drawMaskGuides();
   }
 
@@ -813,12 +825,13 @@ function drawMaskGuides() {
 
     editTarget.points.forEach(([x, y], pointIndex) => {
       const selected = state.activePoint?.targetKey === editTarget.key && state.activePoint.pointIndex === pointIndex;
+      const hovered = state.hoverPoint?.targetKey === editTarget.key && state.hoverPoint.pointIndex === pointIndex;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(x * state.canvasWidth, y * state.canvasHeight, selected ? 10 : 8, 0, Math.PI * 2);
+      ctx.arc(x * state.canvasWidth, y * state.canvasHeight, selected || hovered ? 11 : 8, 0, Math.PI * 2);
       ctx.fillStyle = selected ? "#1c7972" : "#ffffff";
       ctx.fill();
-      ctx.lineWidth = 3;
+      ctx.lineWidth = hovered && !selected ? 4 : 3;
       ctx.strokeStyle = "#b44134";
       ctx.stroke();
       ctx.restore();
@@ -826,6 +839,7 @@ function drawMaskGuides() {
   }
 
   drawDraftGuides();
+  drawPointerCrosshair();
 }
 
 function drawDraftGuides() {
@@ -865,6 +879,31 @@ function drawDraftGuides() {
     ctx.textBaseline = "middle";
     ctx.fillText(String(index + 1), x * state.canvasWidth, y * state.canvasHeight);
   });
+  ctx.restore();
+}
+
+function drawPointerCrosshair() {
+  if (!state.draft || !state.pointerPosition) return;
+
+  const { x, y } = state.pointerPosition;
+  ctx.save();
+  ctx.setLineDash([5, 6]);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = state.draft.kind === "paint" ? "rgba(28, 121, 114, 0.92)" : "rgba(180, 65, 52, 0.92)";
+  ctx.beginPath();
+  ctx.moveTo(0, y);
+  ctx.lineTo(state.canvasWidth, y);
+  ctx.moveTo(x, 0);
+  ctx.lineTo(x, state.canvasHeight);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -935,6 +974,7 @@ function startMaskDrag(event) {
   if (!state.editMode) return;
 
   const position = getCanvasPosition(event);
+  state.pointerPosition = position;
   if (state.draft) {
     addDraftPoint(position);
     return;
@@ -986,18 +1026,27 @@ function startMaskDrag(event) {
   }
 
   state.activePoint = { targetKey: target.key, pointIndex: nearest.pointIndex };
+  state.hoverPoint = { targetKey: target.key, pointIndex: nearest.pointIndex };
   state.drag = { mode: "point", pointIndex: nearest.pointIndex };
   dom.canvas.setPointerCapture(event.pointerId);
   dom.canvas.classList.add("is-dragging");
+  updateCanvasCursor();
   syncEditTools();
   renderCanvas();
 }
 
 function moveMaskPoint(event) {
-  if (!state.drag) return;
+  if (state.editMode) {
+    state.pointerPosition = getCanvasPosition(event);
+  }
+
+  if (!state.drag) {
+    updateHoverState(event);
+    return;
+  }
 
   const target = getEditTarget();
-  const position = getCanvasPosition(event);
+  const position = state.pointerPosition;
 
   if (state.drag.mode === "move") {
     const dx = (position.x - state.drag.start.x) / state.canvasWidth;
@@ -1026,7 +1075,16 @@ function endMaskDrag(event) {
   }
   state.drag = null;
   dom.canvas.classList.remove("is-dragging");
+  updateHoverState(event);
   saveMasks();
+}
+
+function leaveCanvas() {
+  if (state.drag) return;
+  state.hoverPoint = null;
+  state.pointerPosition = null;
+  updateCanvasCursor();
+  renderCanvas();
 }
 
 function getEditValue(maskId, kind = "outer", holeIndex = 0) {
@@ -1114,7 +1172,11 @@ function startDraft(kind) {
     points: [],
   };
   state.activePoint = null;
+  state.hoverPoint = null;
+  state.pointerPosition = null;
   state.moveMode = false;
+  dom.canvas.classList.add("is-drawing");
+  updateCanvasCursor();
   renderCanvas();
 }
 
@@ -1154,7 +1216,11 @@ function finishDraft() {
 
   state.draft = null;
   state.activePoint = null;
+  state.hoverPoint = null;
+  state.pointerPosition = null;
   state.moveMode = false;
+  dom.canvas.classList.remove("is-drawing");
+  updateCanvasCursor();
   saveMasks();
   renderAreaControls();
   renderCanvas();
@@ -1162,6 +1228,9 @@ function finishDraft() {
 
 function cancelDraft() {
   state.draft = null;
+  state.pointerPosition = null;
+  dom.canvas.classList.remove("is-drawing");
+  updateCanvasCursor();
   renderCanvas();
 }
 
@@ -1230,6 +1299,18 @@ function getMovePointGroups(target) {
   return [target.points];
 }
 
+function resetEditInteraction() {
+  state.activePoint = null;
+  state.hoverPoint = null;
+  state.pointerPosition = null;
+  state.moveMode = false;
+  state.draft = null;
+  state.drag = null;
+  dom.canvas.classList.toggle("is-editing", state.editMode);
+  dom.canvas.classList.remove("is-drawing", "is-dragging");
+  updateCanvasCursor();
+}
+
 function syncEditTools() {
   const disabled = !state.editMode;
   const target = state.editMode ? getEditTarget() : null;
@@ -1250,6 +1331,81 @@ function syncEditTools() {
   dom.cancelDrawButton.disabled = !state.draft;
   dom.clearMaskButton.disabled = disabled || (!state.masks.length && !state.draft);
   dom.exportMaskButton.disabled = !state.masks.length;
+}
+
+async function copyMaskExport() {
+  const text = JSON.stringify(
+    state.masks.map((mask) => ({
+      id: mask.id,
+      label: mask.label,
+      enabled: mask.enabled,
+      points: mask.points,
+      holes: mask.holes,
+    })),
+    null,
+    2,
+  );
+
+  try {
+    await navigator.clipboard.writeText(text);
+    dom.targetPosition.textContent = "Maske JSON kopyalandı";
+  } catch {
+    window.prompt("Maske JSON", text);
+  }
+}
+
+function updateHoverState(event) {
+  if (!state.editMode || state.drag) return;
+
+  if (!event) {
+    updateCanvasCursor();
+    return;
+  }
+
+  const position = getCanvasPosition(event);
+  state.pointerPosition = position;
+
+  if (state.draft) {
+    state.hoverPoint = null;
+    updateCanvasCursor("crosshair");
+    renderCanvas();
+    return;
+  }
+
+  const target = getEditTarget();
+  if (!target.mask) {
+    state.hoverPoint = null;
+    updateCanvasCursor("default");
+    renderCanvas();
+    return;
+  }
+
+  const nearest = findNearestPoint(target.points, position);
+  state.hoverPoint = nearest ? { targetKey: target.key, pointIndex: nearest.pointIndex } : null;
+
+  if (nearest) {
+    updateCanvasCursor("grab");
+  } else if (state.moveMode && (isPointInPolygon(position, target.points) || findNearestEdge(target.points, position))) {
+    updateCanvasCursor("move");
+  } else if (!state.moveMode && findNearestEdge(target.points, position)) {
+    updateCanvasCursor("copy");
+  } else {
+    updateCanvasCursor("default");
+  }
+
+  renderCanvas();
+}
+
+function updateCanvasCursor(cursor) {
+  if (state.drag) {
+    dom.canvas.style.cursor = "grabbing";
+    return;
+  }
+  if (cursor) {
+    dom.canvas.style.cursor = cursor;
+    return;
+  }
+  dom.canvas.style.cursor = state.draft ? "crosshair" : "default";
 }
 
 function getTargetPositionText() {

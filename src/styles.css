@@ -312,6 +312,10 @@ select:focus-visible {
   cursor: grab;
 }
 
+#paintCanvas.is-drawing {
+  cursor: crosshair;
+}
+
 #paintCanvas.is-dragging {
   cursor: grabbing;
 }
