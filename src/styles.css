@@ -641,15 +641,16 @@ select {
   }
 
   .app {
-    height: auto;
+    height: 100vh;
     min-height: 100vh;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .workspace {
     grid-template-columns: 1fr;
-    height: auto;
-    overflow: visible;
+    height: calc(100vh - 78px);
+    padding-bottom: 0;
+    overflow: hidden;
   }
 
   .preview-panel,
@@ -659,24 +660,67 @@ select {
   }
 
   .preview-panel {
-    min-height: 520px;
+    min-height: 58vh;
+  }
+
+  .control-panel {
+    overflow: visible;
   }
 
   .swatch-grid {
-    min-height: 220px;
-    max-height: 62vh;
+    min-height: 140px;
+    max-height: none;
   }
 
   #paintCanvas {
-    max-height: 70vh;
+    width: 100%;
+    max-height: 72vh;
   }
 }
 
 @media (max-width: 680px) {
   .topbar {
-    position: static;
-    align-items: stretch;
-    flex-direction: column;
+    display: none;
+  }
+
+  body {
+    overflow: auto;
+    min-height: 100vh;
+  }
+
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .workspace {
+    padding: 14px 14px 120px;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .preview-panel,
+  .control-panel {
+    min-height: 0;
+    height: auto;
+  }
+
+  .preview-panel {
+    min-height: 340px;
+  }
+
+  .stage-wrap {
+    flex: 1;
+    min-height: 320px;
+    width: 100%;
+  }
+
+  #paintCanvas {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - 290px);
+    min-height: 280px;
   }
 
   .top-actions {
@@ -710,5 +754,47 @@ select {
   .current-swatch {
     width: 62px;
     height: 62px;
+  }
+
+  .control-panel {
+    overflow: visible;
+  }
+
+  .swatch-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 4px 2px 1px;
+    gap: 10px;
+  }
+
+  .swatch {
+    min-width: 160px;
+    max-width: 160px;
+    flex: 0 0 auto;
+  }
+
+  .swatch-text {
+    min-width: 0;
+  }
+
+  .mobile-download-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 12px 14px 18px;
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+  }
+
+  .mobile-download-footer .button {
+    width: min(100%, 460px);
   }
 }

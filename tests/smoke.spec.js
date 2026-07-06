@@ -8,6 +8,7 @@ test("renders palette and painted canvas", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Ev Renk Simülatörü" })).toBeVisible();
   await page.waitForFunction(() => document.querySelectorAll(".swatch").length > 1000);
+  await expect(page.locator("#areaToggles")).toContainText("Boya alanı 1");
 
   const canvasStats = await page.locator("#paintCanvas").evaluate((canvas) => {
     const context = canvas.getContext("2d");

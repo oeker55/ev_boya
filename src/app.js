@@ -6,107 +6,62 @@ const HOUSE_IMAGE_SRC = "/ev.jpg";
 
 const defaultMasks = [
   {
-    id: "main",
-    label: "Ana cephe",
+    id: "paint-1783363254532",
+    label: "Boya alanı 1",
     enabled: true,
     points: [
-      [0.0, 0.153],
-      [0.772, 0.12],
-      [0.765, 0.158],
-      [0.729, 0.398],
-      [0.693, 0.407],
-      [0.693, 0.445],
-      [0.544, 0.445],
-      [0.542, 0.421],
-      [0.0, 0.417],
+      [0.019236287426715126, 0.16189753200741777],
+      [0.721159947291533, 0.14122566426957656],
+      [0.7597473006206379, 0.20048499666588426],
+      [0.8222221461458645, 0.20186308539126985],
+      [0.8240597221539264, 0.25698794153692],
+      [0.8222221461458645, 0.2735254263905485],
+      [0.7615847521401143, 0.27076920225655493],
+      [0.7579098491011613, 0.3190035214088324],
+      [0.7285098778580245, 0.3272721938108131],
+      [0.7027849341424262, 0.3258940584022051],
+      [0.7046223856619027, 0.34380967866444156],
+      [0.7009476071115349, 0.3589690281094621],
+      [0.6991099066148877, 0.3699940180118811],
+      [0.6825724694738428, 0.38515332077367925],
+      [0.6733849628992894, 0.42925323370013274],
+      [0.6917599760483962, 0.43338759324273435],
+      [0.6917599760483962, 0.4499251247795852],
+      [0.6072350898465243, 0.4485469426877548],
+      [0.6090726658545861, 0.38515332077367925],
+      [0.5521101748877891, 0.3837752320482936],
+      [0.5447602443212975, 0.43476577533456473],
+      [0.14418604072146116, 0.412715842212949],
+      [0.13867362391873883, 0.36034711683484766],
+      [0.1111111041950786, 0.363103434335286],
+      [0.08538616047948024, 0.3589690281094621],
+      [0.04128620361477505, 0.34518781407304955],
+      [0.032098759284514305, 0.34380967866444156],
     ],
     holes: [
       [
-        [0.104, 0.229],
-        [0.272, 0.225],
-        [0.272, 0.337],
-        [0.101, 0.337],
+        [0.5429229172904063, 0.20875366906786488],
+        [0.5300602586997292, 0.3148691151830085],
+        [0.6862474970013812, 0.31762533931700204],
+        [0.6899224000403343, 0.20737553365925693],
       ],
       [
-        [0.351, 0.223],
-        [0.455, 0.222],
-        [0.452, 0.331],
-        [0.35, 0.329],
+        [0.3536605557294938, 0.22391301851288542],
+        [0.3554981317375557, 0.2941973174700009],
+        [0.44002289345084233, 0.2941973174700009],
+        [0.44002289345084233, 0.22804737805548694],
       ],
       [
-        [0.53, 0.201],
-        [0.703, 0.199],
-        [0.7, 0.39],
-        [0.527, 0.39],
+        [0.397760512594199, 0.3741283775544826],
+        [0.397760512594199, 0.4003126702186997],
+        [0.4492104000253957, 0.4030689410359156],
+        [0.44553549698644257, 0.37688460168847615],
       ],
       [
-        [0.209, 0.357],
-        [0.277, 0.358],
-        [0.276, 0.417],
-        [0.209, 0.416],
-      ],
-      [
-        [0.388, 0.354],
-        [0.448, 0.355],
-        [0.447, 0.416],
-        [0.388, 0.415],
-      ],
-      [
-        [0.544, 0.359],
-        [0.62, 0.359],
-        [0.62, 0.475],
-        [0.544, 0.475],
-      ],
-    ],
-  },
-  {
-    id: "base",
-    label: "Alt kaide",
-    enabled: true,
-    points: [
-      [0.0, 0.417],
-      [0.544, 0.421],
-      [0.544, 0.475],
-      [0.0, 0.477],
-    ],
-    holes: [
-      [
-        [0.209, 0.357],
-        [0.277, 0.358],
-        [0.276, 0.417],
-        [0.209, 0.416],
-      ],
-      [
-        [0.388, 0.354],
-        [0.448, 0.355],
-        [0.447, 0.416],
-        [0.388, 0.415],
-      ],
-      [
-        [0.487, 0.446],
-        [0.753, 0.445],
-        [0.753, 0.595],
-        [0.488, 0.595],
-      ],
-    ],
-  },
-  {
-    id: "side",
-    label: "Sağ yan",
-    enabled: true,
-    points: [
-      [0.765, 0.158],
-      [0.855, 0.189],
-      [0.852, 0.3],
-      [0.733, 0.398],
-      [0.729, 0.315],
-    ],
-    holes: [
-      [
-        [0.768, 0.184],
-        [0.829, 0.211],
-        [0.83, 0.314],
-        [0.764, 0.305],
+        [0.21033591377422625, 0.36585961178605714],
+        [0.20849840001045705, 0.3865314561822871],
+        [0.25443580839463875, 0.3865314561822871],
+        [0.2525982946308696, 0.3672377471946651],
       ],
     ],
   },
@@ -145,6 +100,7 @@ const dom = {
   photoName: document.querySelector("#photoName"),
   canvasSize: document.querySelector("#canvasSize"),
   downloadButton: document.querySelector("#downloadButton"),
+  downloadButtonMobile: document.querySelector("#downloadButtonMobile"),
   originalToggle: document.querySelector("#originalToggle"),
   maskToggle: document.querySelector("#maskToggle"),
   currentSwatch: document.querySelector("#currentSwatch"),
@@ -244,6 +200,9 @@ function saveMasks() {
 
 function wireControls() {
   dom.downloadButton.addEventListener("click", downloadCanvas);
+  if (dom.downloadButtonMobile) {
+    dom.downloadButtonMobile.addEventListener("click", downloadCanvas);
+  }
 
   dom.originalToggle.addEventListener("change", () => {
     state.showOriginal = dom.originalToggle.checked;
@@ -578,7 +537,6 @@ function renderPaletteSelection() {
   const selected = dom.swatchGrid.querySelector(`[data-color-index="${state.selectedColorIndex}"]`);
   if (selected) {
     selected.classList.add("is-selected");
-    selected.scrollIntoView({ block: "nearest" });
   }
 }
 
@@ -607,8 +565,10 @@ function startPlayback() {
   state.isPlaying = true;
   dom.playButton.classList.add("is-playing");
   dom.playButton.querySelector("span").textContent = "Durdur";
-  const icon = dom.playButton.querySelector("i");
-  icon.setAttribute("data-lucide", "pause");
+  const icon = dom.playButton.querySelector("[data-lucide]");
+  if (icon) {
+    icon.setAttribute("data-lucide", "pause");
+  }
   refreshIcons();
 
   playTimer = window.setInterval(() => stepColor(1), state.speed);
@@ -620,8 +580,10 @@ function stopPlayback() {
   playTimer = null;
   dom.playButton.classList.remove("is-playing");
   dom.playButton.querySelector("span").textContent = "Tek tek uygula";
-  const icon = dom.playButton.querySelector("i");
-  icon.setAttribute("data-lucide", "play");
+  const icon = dom.playButton.querySelector("[data-lucide]");
+  if (icon) {
+    icon.setAttribute("data-lucide", "play");
+  }
   refreshIcons();
 }
 
@@ -813,6 +775,12 @@ function drawMaskGuides() {
     ctx.strokeStyle = active ? "#1c7972" : "rgba(31, 36, 33, 0.45)";
     ctx.lineWidth = active ? 2 : 1.5;
     ctx.stroke(path);
+
+    if (active && !state.editMode) {
+      ctx.fillStyle = "rgba(28, 121, 114, 0.08)";
+      ctx.fill(path);
+    }
+
     ctx.restore();
 
     if (!active || !state.editMode) continue;
