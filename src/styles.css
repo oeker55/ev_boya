@@ -33,6 +33,7 @@ body {
     linear-gradient(180deg, rgba(28, 121, 114, 0.08), transparent 280px),
     var(--bg);
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 button,
@@ -47,6 +48,15 @@ label,
 select,
 input[type="range"] {
   -webkit-tap-highlight-color: transparent;
+}
+
+#paintCanvas,
+.swatch,
+.button,
+.icon-button,
+.link-button,
+.switch {
+  touch-action: manipulation;
 }
 
 .app {

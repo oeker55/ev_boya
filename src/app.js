@@ -745,7 +745,7 @@ function paintMasks() {
     ctx.save();
     ctx.clip(path, "evenodd");
     ctx.globalAlpha = state.opacity;
-    ctx.globalCompositeOperation = "color";
+    ctx.globalCompositeOperation = "source-atop";
     ctx.fillStyle = color.hex;
     ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
 
