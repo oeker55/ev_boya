@@ -90,7 +90,7 @@ const state = {
   showMask: false,
   editMode: false,
   editAreaId: "main|outer",
-  opacity: 0.30,
+  opacity: 0.40,
   speed: 900,
   isPlaying: false,
   moveMode: false,
