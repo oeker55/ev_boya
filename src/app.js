@@ -90,7 +90,7 @@ const state = {
   showMask: false,
   editMode: false,
   editAreaId: "main|outer",
-  opacity: 0.25,
+  opacity: 0.30,
   speed: 900,
   isPlaying: false,
   moveMode: false,
@@ -390,6 +390,8 @@ function wireControls() {
 function renderAll() {
   renderCurrentColor();
   renderPalette();
+  // Ensure UI range shows current opacity (percent)
+  if (dom.opacityRange) dom.opacityRange.value = String(Math.round(state.opacity * 100));
   renderCanvas();
 }
 
