@@ -354,6 +354,16 @@ function wireControls() {
     setColor(Number(button.dataset.colorIndex));
   });
 
+  // Open mobile color picker popup when tapping current swatch
+  if (dom.currentSwatch) {
+    dom.currentSwatch.addEventListener("click", (e) => {
+      // Only show modal on small screens (mobile)
+      if (!window.matchMedia || window.matchMedia("(max-width: 1040px)").matches) {
+        openColorPickerPopup();
+      }
+    });
+  }
+
   dom.canvas.addEventListener("pointerdown", startMaskDrag);
   dom.canvas.addEventListener("pointermove", moveMaskPoint);
   dom.canvas.addEventListener("pointerup", endMaskDrag);
@@ -469,29 +479,31 @@ function renderCurrentColor() {
   dom.currentHex.textContent = color.hex.toUpperCase();
 }
 
-function getFilteredColors() {
+function getFilteredColors(filterText) {
+  const query = (filterText ?? state.filterText ?? "")
+    .toString()
+    .toLocaleLowerCase("tr")
+    .replace("#", "");
+
   return COLORS.map((color, index) => ({ color, index })).filter(({ color }) => {
     const familyMatches = state.family === "Tümü" || color.family === state.family;
     if (!familyMatches) return false;
-    if (!state.filterText) return true;
+    if (!query) return true;
 
-    const haystack = `${color.name} ${color.code} ${color.hex}`
-      .toLocaleLowerCase("tr")
-      .replace("#", "");
-    const needle = state.filterText.replace("#", "");
-    return haystack.includes(needle);
+    const haystack = `${color.name} ${color.code} ${color.hex}`.toLocaleLowerCase("tr").replace("#", "");
+    return haystack.includes(query);
   });
 }
 
-function renderPalette() {
-  const filtered = getFilteredColors();
-  dom.resultCount.textContent = `${filtered.length} renk`;
+function renderPalette(targetGrid = dom.swatchGrid, filterText = undefined, countNode = targetGrid === dom.swatchGrid ? dom.resultCount : null) {
+  const filtered = getFilteredColors(filterText);
+  if (countNode) countNode.textContent = `${filtered.length} renk`;
 
   if (!filtered.length) {
     const empty = document.createElement("div");
     empty.className = "empty-result";
     empty.textContent = "Sonuç yok";
-    dom.swatchGrid.replaceChildren(empty);
+    targetGrid.replaceChildren(empty);
     return;
   }
 
@@ -526,7 +538,7 @@ function renderPalette() {
     fragment.append(button);
   }
 
-  dom.swatchGrid.replaceChildren(fragment);
+  targetGrid.replaceChildren(fragment);
 }
 
 function setColor(index) {
@@ -546,6 +558,89 @@ function renderPaletteSelection() {
   if (selected) {
     selected.classList.add("is-selected");
   }
+}
+
+// Mobile color picker popup (lazy-created)
+let _colorPopup = null;
+function openColorPickerPopup() {
+  if (_colorPopup) return _colorPopup.show();
+
+  const overlay = document.createElement("div");
+  overlay.className = "color-popup-overlay";
+
+  const panel = document.createElement("div");
+  panel.className = "color-popup";
+
+  const header = document.createElement("div");
+  header.className = "color-popup-header";
+  const title = document.createElement("div");
+  title.className = "color-popup-title";
+  title.textContent = "Renk seçin";
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "icon-button";
+  closeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>';
+  closeBtn.addEventListener("click", closeColorPickerPopup);
+  header.append(title, closeBtn);
+
+  const search = document.createElement("input");
+  search.className = "color-popup-search";
+  search.placeholder = "Ara (isim, kod veya hex)";
+
+  const count = document.createElement("div");
+  count.className = "color-popup-count";
+
+  const grid = document.createElement("div");
+  grid.className = "swatch-grid color-popup-grid";
+
+  panel.append(header, search, count, grid);
+  overlay.append(panel);
+  document.body.append(overlay);
+
+  function onSearch() {
+    renderPalette(grid, search.value || undefined, count);
+  }
+
+  search.addEventListener("input", onSearch);
+
+  grid.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".swatch");
+    if (!btn) return;
+    setColor(Number(btn.dataset.colorIndex));
+    closeColorPickerPopup();
+  });
+
+  overlay.addEventListener("click", (ev) => {
+    if (ev.target === overlay) closeColorPickerPopup();
+  });
+
+  document.addEventListener("keydown", function esc(e) {
+    if (e.key === "Escape") closeColorPickerPopup();
+  });
+
+  _colorPopup = {
+    overlay,
+    show() {
+      document.body.classList.add("has-modal");
+      overlay.classList.add("is-open");
+      search.value = "";
+      onSearch();
+      search.focus();
+    },
+    close() {
+      closeColorPickerPopup();
+    },
+  };
+
+  _colorPopup.show();
+  return _colorPopup;
+}
+
+function closeColorPickerPopup() {
+  if (!_colorPopup) return;
+  _colorPopup.overlay.remove();
+  _colorPopup = null;
+  document.body.classList.remove("has-modal");
 }
 
 function stepColor(direction) {

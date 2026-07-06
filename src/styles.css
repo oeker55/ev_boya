@@ -808,3 +808,36 @@ select {
     width: min(100%, 460px);
   }
 }
+
+/* Color picker popup styles */
+.color-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 60;
+}
+.color-popup {
+  width: 100%;
+  max-width: 720px;
+  background: var(--surface);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 12px 14px 22px;
+  box-shadow: 0 -8px 40px rgba(31,36,33,0.18);
+}
+.color-popup-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:8px;
+}
+.color-popup-title{font-weight:900}
+.color-popup-search{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);margin-bottom:8px}
+.color-popup-count{color:var(--muted);font-weight:800;margin-bottom:8px}
+.color-popup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:8px;max-height:50vh;overflow:auto;padding:2px}
+
+body.has-modal { overflow: hidden; }
