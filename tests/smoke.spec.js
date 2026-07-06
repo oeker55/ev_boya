@@ -6,7 +6,7 @@ test("renders palette and painted canvas", async ({ page }) => {
 
   await page.goto("http://localhost:5173/", { waitUntil: "networkidle" });
 
-  await expect(page.getByRole("heading", { name: "Ev Renk Simülatörü" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ayvatullu Ev Boya" })).toBeVisible();
   await page.waitForFunction(() => document.querySelectorAll(".swatch").length > 1000);
   await expect(page.locator("#areaToggles")).toContainText("Boya alanı 1");
 

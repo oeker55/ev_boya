@@ -1,8 +1,8 @@
-# Bianca Stella Ev Renk Simülatörü
+# Ayvatullu Ev Boya
 
-Bu proje, Bianca Stella kartelasındaki renkleri tek bir ev fotoğrafına uygulamak için hazırlanmış statik bir web aracıdır.
+Bu proje, ev boyama çalışmaları için renkleri tek bir ev fotoğrafına uygulamak üzere hazırlanmış statik bir web aracıdır.
 
-- Renk verisi resmi kartela sayfasından alınır: https://biancastella.com.tr/kartela/
+- Renk verisi kartela kaynağından alınır: https://biancastella.com.tr/kartela/
 - Sabit fotoğraf yolu: `public/ev.jpg`
 - Cephe maskelerini açıp kapatabilir, dış çizgiyi ve pencere/kapı boşluklarını sürükleyerek ayarlayabilirsin.
 - Seçili rengi PNG olarak indirebilirsin.
