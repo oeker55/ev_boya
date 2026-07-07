@@ -75,6 +75,10 @@ input[type="range"] {
   overflow: hidden;
 }
 
+.mobile-download-footer {
+  display: none;
+}
+
 .topbar {
   min-height: 78px;
   padding: 14px clamp(14px, 2.6vw, 30px);
@@ -939,7 +943,7 @@ select {
   }
 
   .workspace {
-    padding: 14px 14px 120px;
+    padding: 14px 14px calc(156px + env(safe-area-inset-bottom, 0px));
     min-height: 100vh;
     overflow: visible;
   }
@@ -1004,19 +1008,27 @@ select {
     overflow: visible;
   }
 
+  .palette-section {
+    min-height: auto;
+    padding-bottom: 18px;
+  }
+
   .swatch-grid {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 1px 4px 2px 1px;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    padding: 1px 2px 24px 1px;
+    gap: 8px;
   }
 
   .swatch {
-    min-width: 160px;
-    max-width: 160px;
-    flex: 0 0 auto;
+    min-width: 0;
+    max-width: none;
+    min-height: 62px;
+    width: 100%;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .swatch-text {
@@ -1029,7 +1041,7 @@ select {
     right: 0;
     bottom: 0;
     width: 100%;
-    padding: 12px 14px 18px;
+    padding: 12px 14px calc(18px + env(safe-area-inset-bottom, 0px));
     background: rgba(255, 255, 255, 0.96);
     border-top: 1px solid var(--line);
     display: flex;
@@ -1040,6 +1052,19 @@ select {
 
   .mobile-download-footer .button {
     width: min(100%, 460px);
+  }
+}
+
+@supports (height: 100dvh) {
+  @media (max-width: 680px) {
+    body,
+    .app {
+      min-height: 100dvh;
+    }
+
+    .workspace {
+      min-height: 100dvh;
+    }
   }
 }
 
