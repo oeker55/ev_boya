@@ -1091,7 +1091,8 @@ select {
   z-index: 1;
   width: 100%;
   max-width: 720px;
-  max-height: calc(var(--color-popup-vh, 100vh) - max(10px, env(safe-area-inset-top, 0px)));
+  max-height: calc(100vh - 10px);
+  max-height: calc(var(--color-popup-vh, 100vh) - 10px - env(safe-area-inset-top, 0px));
   background: var(--surface);
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
