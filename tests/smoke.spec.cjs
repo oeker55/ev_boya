@@ -42,6 +42,8 @@ test("renders palette and painted canvas", async ({ page }) => {
 });
 
 test("protects admin panel and opens the selected image after login", async ({ page }) => {
+  test.skip(!process.env.MONGODB_URI, "Admin API requires MONGODB_URI");
+
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 

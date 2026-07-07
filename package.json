@@ -2,16 +2,22 @@
   "name": "bianca-house-color-simulator",
   "version": "1.0.0",
   "private": true,
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "dev": "node server.js --dev",
-    "start": "node server.js",
-    "build": "vite build",
-    "test": "playwright test tests/smoke.spec.js --project=chrome --reporter=line"
+    "dev": "next dev --hostname 0.0.0.0",
+    "start": "next start --hostname 0.0.0.0",
+    "build": "next build",
+    "seed": "node scripts/seed-mongo.cjs",
+    "test": "playwright test tests/smoke.spec.cjs --project=chrome --reporter=line"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "prettier": "^3.9.4",
-    "vite": "^7.0.2"
+    "prettier": "^3.9.4"
+  },
+  "dependencies": {
+    "mongodb": "^7.4.0",
+    "next": "^16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   }
 }

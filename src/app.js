@@ -751,7 +751,7 @@ async function loadInitialProject() {
     if (state.isAuthenticated) {
       await loadAdminImages();
       const selectedId = new URLSearchParams(window.location.search).get("image");
-      await selectAdminImage(selectedId || state.images[0]?.id || DEFAULT_IMAGE_ID, false);
+      await selectAdminImage(selectedId || DEFAULT_IMAGE_ID, false);
       return;
     }
   }
@@ -898,8 +898,10 @@ async function handleLogin(event) {
     });
     state.isAuthenticated = Boolean(session.authenticated);
     dom.loginPassword.value = "";
+    syncAdminUi();
+    setLoginStatus("Resimler yükleniyor");
     await loadAdminImages();
-    await selectAdminImage(state.images[0]?.id || DEFAULT_IMAGE_ID);
+    await selectAdminImage(DEFAULT_IMAGE_ID);
     syncAdminUi();
     setLoginStatus("");
   } catch (error) {
