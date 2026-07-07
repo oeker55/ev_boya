@@ -10,65 +10,72 @@ const defaultMasks = [
     label: "Boya alanı 1",
     enabled: true,
     points: [
-      [0.010048780852161713, 0.1649121477774211],
-      [0.721159947291533, 0.14122566426957656],
-      [0.7597473006206379, 0.20048499666588426],
-      [0.8222221461458645, 0.20186308539126985],
-      [0.8240597221539264, 0.25698794153692],
-      [0.8222221461458645, 0.2735254263905485],
-      [0.7615847521401143, 0.27076920225655493],
-      [0.7579098491011613, 0.3190035214088324],
-      [0.7285098778580245, 0.3272721938108131],
-      [0.7027849341424262, 0.3258940584022051],
-      [0.7046223856619027, 0.34380967866444156],
-      [0.7009476071115349, 0.3589690281094621],
-      [0.6991099066148877, 0.3699940180118811],
-      [0.6825724694738428, 0.38515332077367925],
-      [0.6733849628992894, 0.42925323370013274],
-      [0.6917599760483962, 0.43338759324273435],
-      [0.6917599760483962, 0.4499251247795852],
-      [0.6072350898465243, 0.4485469426877548],
-      [0.6090726658545861, 0.38515332077367925],
-      [0.5521101748877891, 0.3837752320482936],
-      [0.5447602443212975, 0.43476577533456473],
-      [0.13132356886366198, 0.4115960517571285],
-      [0.12764854133612355, 0.3633617792880734],
-      [0.1111111041950786, 0.363103434335286],
-      [0.08538616047948024, 0.3589690281094621],
-      [0.04128620361477505, 0.34518781407304955],
-      [0.032098759284514305, 0.34380967866444156],
-    ],
-    holes: [
-      [
-        [0.5429229172904063, 0.20875366906786488],
-        [0.5300602586997292, 0.3148691151830085],
-        [0.6862474970013812, 0.31762533931700204],
-        [0.6899224000403343, 0.20737553365925693],
-      ],
-      [
-        [0.3536605557294938, 0.22391301851288542],
-        [0.3554981317375557, 0.2941973174700009],
-        [0.44002289345084233, 0.2941973174700009],
-        [0.44002289345084233, 0.22804737805548694],
-      ],
-      [
-        [0.397760512594199, 0.3741283775544826],
-        [0.397760512594199, 0.4003126702186997],
-        [0.4492104000253957, 0.4030689410359156],
-        [0.44553549698644257, 0.37688460168847615],
-      ],
-      [
-        [0.21033591377422625, 0.36585961178605714],
-        [0.20849840001045705, 0.3865314561822871],
-        [0.25443580839463875, 0.3865314561822871],
-        [0.2525982946308696, 0.3672377471946651],
-      ],
-      [
-        [0.09824863233727942, 0.22692768096611116],
-        [0.10008614610104863, 0.2834306725203693],
-        [0.19379841438888865, 0.2848088079289773],
-        [0.19747344191642707, 0.23106208719193508],
-      ],
+      {
+        id: "paint-1783363254532",
+        label: "Boya alanı 1",
+        enabled: true,
+        points: [
+          [0.010048780852161713, 0.1649121477774211],
+          [0.721159947291533, 0.14122566426957656],
+          [0.7597473006206379, 0.20048499666588426],
+          [0.8222221461458645, 0.20186308539126985],
+          [0.8191489361702128, 0.2575354609929078],
+          [0.817966903073286, 0.2717198581560284],
+          [0.7615847521401143, 0.27076920225655493],
+          [0.7579098491011613, 0.3190035214088324],
+          [0.7285098778580245, 0.3272721938108131],
+          [0.7027849341424262, 0.3258940584022051],
+          [0.7046223856619027, 0.34380967866444156],
+          [0.7009476071115349, 0.3589690281094621],
+          [0.7009456264775413, 0.3798758865248227],
+          [0.6825724694738428, 0.38515332077367925],
+          [0.6733849628992894, 0.42925323370013274],
+          [0.6917599760483962, 0.43338759324273435],
+          [0.6917599760483962, 0.4499251247795852],
+          [0.6016548463356974, 0.4472517730496454],
+          [0.6087470449172577, 0.37810283687943264],
+          [0.5484633569739953, 0.3772163120567376],
+          [0.5447602443212975, 0.43476577533456473],
+          [0.13132356886366198, 0.4115960517571285],
+          [0.12764854133612355, 0.3633617792880734],
+          [0.1111111041950786, 0.363103434335286],
+          [0.08538616047948024, 0.3589690281094621],
+          [0.04128620361477505, 0.34518781407304955],
+          [0.032098759284514305, 0.34380967866444156],
+        ],
+        holes: [
+          [
+            [0.5354609929078015, 0.20611702127659576],
+            [0.5300602586997292, 0.3148691151830085],
+            [0.6862474970013812, 0.31762533931700204],
+            [0.6899224000403343, 0.20737553365925693],
+          ],
+          [
+            [0.3536605557294938, 0.22391301851288542],
+            [0.3546099290780142, 0.3000886524822695],
+            [0.4397163120567376, 0.2983156028368794],
+            [0.4456264775413712, 0.2247340425531915],
+          ],
+          [
+            [0.397760512594199, 0.3741283775544826],
+            [0.397760512594199, 0.4003126702186997],
+            [0.4492104000253957, 0.4030689410359156],
+            [0.44553549698644257, 0.37688460168847615],
+          ],
+          [
+            [0.21033591377422625, 0.36585961178605714],
+            [0.20849840001045705, 0.3865314561822871],
+            [0.25443580839463875, 0.3865314561822871],
+            [0.2525982946308696, 0.3672377471946651],
+          ],
+          [
+            [0.1595744680851064, 0.23625886524822698],
+            [0.15839243498817968, 0.2912234042553192],
+            [0.22340425531914893, 0.2929964539007092],
+            [0.22340425531914893, 0.237145390070922],
+          ],
+        ],
+      },
     ],
   },
 ];
@@ -81,7 +88,7 @@ const state = {
   canvasHeight: 1600,
   selectedColorIndex: Math.max(
     0,
-    COLORS.findIndex((color) => color.name === "Kum Beji"),
+    COLORS.findIndex((color) => color.name === "Kum Beji")
   ),
   masks: loadMasks(),
   filterText: "",
@@ -90,7 +97,7 @@ const state = {
   showMask: false,
   editMode: false,
   editAreaId: "main|outer",
-  opacity: 0.40,
+  opacity: 0.4,
   speed: 900,
   isPlaying: false,
   moveMode: false,
@@ -199,8 +206,8 @@ function saveMasks() {
         enabled: mask.enabled,
         points: mask.points,
         holes: mask.holes,
-      })),
-    ),
+      }))
+    )
   );
 }
 
@@ -413,7 +420,7 @@ function renderFamilyOptions() {
       option.value = family;
       option.textContent = family;
       return option;
-    }),
+    })
   );
 }
 
@@ -437,7 +444,7 @@ function renderAreaControls() {
 
       label.append(input, text);
       return label;
-    }),
+    })
   );
 
   dom.editAreaSelect.replaceChildren(
@@ -454,7 +461,7 @@ function renderAreaControls() {
       });
 
       return [outer, ...holes];
-    }),
+    })
   );
   if (!state.masks.length) {
     const option = document.createElement("option");
@@ -490,12 +497,18 @@ function getFilteredColors(filterText) {
     if (!familyMatches) return false;
     if (!query) return true;
 
-    const haystack = `${color.name} ${color.code} ${color.hex}`.toLocaleLowerCase("tr").replace("#", "");
+    const haystack = `${color.name} ${color.code} ${color.hex}`
+      .toLocaleLowerCase("tr")
+      .replace("#", "");
     return haystack.includes(query);
   });
 }
 
-function renderPalette(targetGrid = dom.swatchGrid, filterText = undefined, countNode = targetGrid === dom.swatchGrid ? dom.resultCount : null) {
+function renderPalette(
+  targetGrid = dom.swatchGrid,
+  filterText = undefined,
+  countNode = targetGrid === dom.swatchGrid ? dom.resultCount : null
+) {
   const filtered = getFilteredColors(filterText);
   if (countNode) countNode.textContent = `${filtered.length} renk`;
 
@@ -579,7 +592,8 @@ function openColorPickerPopup() {
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "icon-button";
-  closeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>';
+  closeBtn.innerHTML =
+    '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>';
   closeBtn.addEventListener("click", closeColorPickerPopup);
   header.append(title, closeBtn);
 
@@ -649,9 +663,7 @@ function stepColor(direction) {
 
   const currentPosition = filtered.findIndex(({ index }) => index === state.selectedColorIndex);
   const nextPosition =
-    currentPosition === -1
-      ? 0
-      : (currentPosition + direction + filtered.length) % filtered.length;
+    currentPosition === -1 ? 0 : (currentPosition + direction + filtered.length) % filtered.length;
 
   setColor(filtered[nextPosition].index);
 }
@@ -895,11 +907,21 @@ function drawMaskGuides() {
     }
 
     editTarget.points.forEach(([x, y], pointIndex) => {
-      const selected = state.activePoint?.targetKey === editTarget.key && state.activePoint.pointIndex === pointIndex;
-      const hovered = state.hoverPoint?.targetKey === editTarget.key && state.hoverPoint.pointIndex === pointIndex;
+      const selected =
+        state.activePoint?.targetKey === editTarget.key &&
+        state.activePoint.pointIndex === pointIndex;
+      const hovered =
+        state.hoverPoint?.targetKey === editTarget.key &&
+        state.hoverPoint.pointIndex === pointIndex;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(x * state.canvasWidth, y * state.canvasHeight, selected || hovered ? 11 : 8, 0, Math.PI * 2);
+      ctx.arc(
+        x * state.canvasWidth,
+        y * state.canvasHeight,
+        selected || hovered ? 11 : 8,
+        0,
+        Math.PI * 2
+      );
       ctx.fillStyle = selected ? "#1c7972" : "#ffffff";
       ctx.fill();
       ctx.lineWidth = hovered && !selected ? 4 : 3;
@@ -918,7 +940,8 @@ function drawDraftGuides() {
 
   ctx.save();
   ctx.strokeStyle = state.draft.kind === "paint" ? "#1c7972" : "#b44134";
-  ctx.fillStyle = state.draft.kind === "paint" ? "rgba(28, 121, 114, 0.16)" : "rgba(180, 65, 52, 0.16)";
+  ctx.fillStyle =
+    state.draft.kind === "paint" ? "rgba(28, 121, 114, 0.16)" : "rgba(180, 65, 52, 0.16)";
   ctx.lineWidth = 3;
   ctx.beginPath();
   state.draft.points.forEach(([x, y], index) => {
@@ -960,7 +983,8 @@ function drawPointerCrosshair() {
   ctx.save();
   ctx.setLineDash([5, 6]);
   ctx.lineWidth = 1.5;
-  ctx.strokeStyle = state.draft.kind === "paint" ? "rgba(28, 121, 114, 0.92)" : "rgba(180, 65, 52, 0.92)";
+  ctx.strokeStyle =
+    state.draft.kind === "paint" ? "rgba(28, 121, 114, 0.92)" : "rgba(180, 65, 52, 0.92)";
   ctx.beginPath();
   ctx.moveTo(0, y);
   ctx.lineTo(state.canvasWidth, y);
@@ -980,7 +1004,10 @@ function drawPointerCrosshair() {
 
 function drawNoPaintAreaGuides(mask, editTarget) {
   mask.holes.forEach((hole, holeIndex) => {
-    const selected = editTarget.kind === "hole" && editTarget.mask.id === mask.id && editTarget.holeIndex === holeIndex;
+    const selected =
+      editTarget.kind === "hole" &&
+      editTarget.mask.id === mask.id &&
+      editTarget.holeIndex === holeIndex;
     const path = new Path2D();
     addPolygon(path, hole);
 
@@ -994,7 +1021,13 @@ function drawNoPaintAreaGuides(mask, editTarget) {
     const center = getPolygonCenter(hole);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(center.x * state.canvasWidth, center.y * state.canvasHeight, selected ? 13 : 11, 0, Math.PI * 2);
+    ctx.arc(
+      center.x * state.canvasWidth,
+      center.y * state.canvasHeight,
+      selected ? 13 : 11,
+      0,
+      Math.PI * 2
+    );
     ctx.fillStyle = selected ? "#b44134" : "rgba(255, 255, 255, 0.92)";
     ctx.fill();
     ctx.lineWidth = 2;
@@ -1004,7 +1037,11 @@ function drawNoPaintAreaGuides(mask, editTarget) {
     ctx.font = "800 12px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(String(holeIndex + 1), center.x * state.canvasWidth, center.y * state.canvasHeight);
+    ctx.fillText(
+      String(holeIndex + 1),
+      center.x * state.canvasWidth,
+      center.y * state.canvasHeight
+    );
     ctx.restore();
   });
 }
@@ -1068,7 +1105,8 @@ function startMaskDrag(event) {
   }
 
   if (state.moveMode) {
-    if (!isPointInPolygon(position, target.points) && !findNearestEdge(target.points, position)) return;
+    if (!isPointInPolygon(position, target.points) && !findNearestEdge(target.points, position))
+      return;
     const groups = getMovePointGroups(target);
     state.drag = {
       mode: "move",
@@ -1388,7 +1426,10 @@ function syncEditTools() {
   const targetText = getTargetPositionText();
   dom.targetPosition.textContent = targetText;
   dom.moveTargetButton.disabled = disabled;
-  dom.moveTargetButton.classList.toggle("is-active", state.editMode && state.moveMode && !state.draft);
+  dom.moveTargetButton.classList.toggle(
+    "is-active",
+    state.editMode && state.moveMode && !state.draft
+  );
   dom.addHoleButton.disabled = disabled || Boolean(state.draft);
   dom.addPointButton.disabled = disabled || Boolean(state.draft) || !target?.mask;
   dom.deletePointButton.disabled = disabled || Boolean(state.draft) || !state.activePoint;
@@ -1414,7 +1455,7 @@ async function copyMaskExport() {
       holes: mask.holes,
     })),
     null,
-    2,
+    2
   );
 
   try {
@@ -1456,7 +1497,10 @@ function updateHoverState(event) {
 
   if (nearest) {
     updateCanvasCursor("grab");
-  } else if (state.moveMode && (isPointInPolygon(position, target.points) || findNearestEdge(target.points, position))) {
+  } else if (
+    state.moveMode &&
+    (isPointInPolygon(position, target.points) || findNearestEdge(target.points, position))
+  ) {
     updateCanvasCursor("move");
   } else if (!state.moveMode && findNearestEdge(target.points, position)) {
     updateCanvasCursor("copy");
@@ -1481,7 +1525,8 @@ function updateCanvasCursor(cursor) {
 
 function getTargetPositionText() {
   if (state.draft) {
-    const name = state.draft.kind === "paint" ? "Boya alanı çiziliyor" : "Boyanmayacak alan çiziliyor";
+    const name =
+      state.draft.kind === "paint" ? "Boya alanı çiziliyor" : "Boyanmayacak alan çiziliyor";
     return `${name} · ${state.draft.points.length} nokta`;
   }
 
@@ -1605,7 +1650,7 @@ function findNearestEdge(points, position) {
     const distance = distanceToSegment(
       position,
       { x: start[0] * state.canvasWidth, y: start[1] * state.canvasHeight },
-      { x: end[0] * state.canvasWidth, y: end[1] * state.canvasHeight },
+      { x: end[0] * state.canvasWidth, y: end[1] * state.canvasHeight }
     );
 
     if (distance <= nearestDistance) {
@@ -1627,7 +1672,7 @@ function findLongestEdge(points) {
     const end = points[endIndex];
     const distance = Math.hypot(
       (end[0] - start[0]) * state.canvasWidth,
-      (end[1] - start[1]) * state.canvasHeight,
+      (end[1] - start[1]) * state.canvasHeight
     );
 
     if (distance > longestDistance) {
