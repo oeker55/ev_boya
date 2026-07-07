@@ -96,6 +96,7 @@ const dom = {
   adminPanel: document.querySelector("#adminPanel"),
   uploadForm: document.querySelector("#uploadForm"),
   uploadInput: document.querySelector("#uploadInput"),
+  aiMaskButton: document.querySelector("#aiMaskButton"),
   imageList: document.querySelector("#imageList"),
   saveStatus: document.querySelector("#saveStatus"),
   copyPublicLinkButton: document.querySelector("#copyPublicLinkButton"),
@@ -214,6 +215,9 @@ function wireControls() {
   }
   if (dom.uploadForm) {
     dom.uploadForm.addEventListener("submit", handleUpload);
+  }
+  if (dom.aiMaskButton) {
+    dom.aiMaskButton.addEventListener("click", generateAiMask);
   }
   if (dom.imageList) {
     dom.imageList.addEventListener("click", (event) => {
@@ -936,6 +940,42 @@ async function handleUpload(event) {
     setSaveStatus("Yüklendi");
   } catch (error) {
     setSaveStatus(error.message || "Yüklenemedi", true);
+  }
+}
+
+async function generateAiMask() {
+  if (!canEditProject() || !state.currentImage) return;
+
+  dom.aiMaskButton.disabled = true;
+  setSaveStatus("AI maske oluşturuyor");
+
+  try {
+    const { image, notes } = await apiRequest(
+      `/api/images/${encodeURIComponent(state.currentImage.id)}/generate-mask`,
+      {
+        method: "POST",
+      }
+    );
+
+    const normalized = normalizeImageSettings(image);
+    replaceImageInList(normalized);
+    state.currentImage = normalized;
+    state.opacity = normalized.opacity;
+    state.masks = cloneMasks(normalized.masks);
+    state.editAreaId = state.masks[0] ? getEditValue(state.masks[0].id, "outer") : "";
+    state.activePoint = null;
+    state.hoverPoint = null;
+    state.pointerPosition = null;
+    state.moveMode = false;
+    state.draft = null;
+    renderAreaControls();
+    renderAll();
+    renderAdminImageList();
+    setSaveStatus(notes ? `AI maske kaydedildi: ${notes}` : "AI maske kaydedildi");
+  } catch (error) {
+    setSaveStatus(error.message || "AI maske oluşturulamadı", true);
+  } finally {
+    dom.aiMaskButton.disabled = false;
   }
 }
 

@@ -75,6 +75,10 @@ export default function PaintPage() {
                 <span>Yükle</span>
               </button>
             </form>
+            <button className="button ai-mask-button" id="aiMaskButton" type="button">
+              <i data-lucide="sparkles" aria-hidden="true" />
+              <span>AI ile maske oluÅŸtur</span>
+            </button>
             <div id="imageList" className="image-list" />
             <output id="saveStatus" className="save-status" />
           </section>
