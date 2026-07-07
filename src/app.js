@@ -1655,6 +1655,17 @@ function startMaskDrag(event) {
 
   let target = getEditTarget();
   if (!target.mask) return;
+
+  if (!state.moveMode) {
+    const pointTarget = findNearestEditablePointAt(position);
+    if (pointTarget) {
+      state.editAreaId = pointTarget.target.key;
+      dom.editAreaSelect.value = state.editAreaId;
+      beginPointDrag(pointTarget.target, pointTarget.pointIndex, event);
+      return;
+    }
+  }
+
   const hitTarget = findEditableTargetAt(position);
 
   if (hitTarget && hitTarget.key !== target.key) {
@@ -1699,9 +1710,13 @@ function startMaskDrag(event) {
     nearest = { pointIndex: edge.insertIndex };
   }
 
-  state.activePoint = { targetKey: target.key, pointIndex: nearest.pointIndex };
-  state.hoverPoint = { targetKey: target.key, pointIndex: nearest.pointIndex };
-  state.drag = { mode: "point", pointIndex: nearest.pointIndex };
+  beginPointDrag(target, nearest.pointIndex, event);
+}
+
+function beginPointDrag(target, pointIndex, event) {
+  state.activePoint = { targetKey: target.key, pointIndex };
+  state.hoverPoint = { targetKey: target.key, pointIndex };
+  state.drag = { mode: "point", pointIndex };
   dom.canvas.setPointerCapture(event.pointerId);
   dom.canvas.classList.add("is-dragging");
   updateCanvasCursor();
@@ -2165,8 +2180,14 @@ function updateHoverState(event) {
     return;
   }
 
-  const nearest = findNearestPoint(target.points, position);
-  state.hoverPoint = nearest ? { targetKey: target.key, pointIndex: nearest.pointIndex } : null;
+  const nearest = findNearestEditablePointAt(position);
+  if (nearest && nearest.target.key !== target.key) {
+    state.editAreaId = nearest.target.key;
+    dom.editAreaSelect.value = state.editAreaId;
+  }
+  state.hoverPoint = nearest
+    ? { targetKey: nearest.target.key, pointIndex: nearest.pointIndex }
+    : null;
 
   if (nearest) {
     updateCanvasCursor("grab");
@@ -2265,37 +2286,64 @@ function getCanvasPosition(event) {
 }
 
 function findEditableTargetAt(position) {
-  for (const mask of state.masks) {
-    for (let holeIndex = 0; holeIndex < mask.holes.length; holeIndex += 1) {
-      if (isPointInPolygon(position, mask.holes[holeIndex])) {
-        return {
-          key: getEditValue(mask.id, "hole", holeIndex),
-          mask,
-          kind: "hole",
-          holeIndex,
-          points: mask.holes[holeIndex],
-        };
-      }
+  return getEditableTargets()
+    .filter((target) => isPointInPolygon(position, target.points))
+    .sort((a, b) => polygonArea(a.points) - polygonArea(b.points))[0];
+}
+
+function findNearestEditablePointAt(position) {
+  const targets = getEditableTargets();
+  const current = getEditTarget();
+  const orderedTargets = [
+    current,
+    ...targets.filter((target) => target.key !== current.key),
+  ].filter((target) => target.mask);
+
+  let nearestMatch = null;
+  for (const target of orderedTargets) {
+    const nearest = findNearestPoint(target.points, position);
+    if (!nearest) continue;
+    if (!nearestMatch || nearest.distance < nearestMatch.distance) {
+      nearestMatch = { target, pointIndex: nearest.pointIndex, distance: nearest.distance };
     }
   }
 
-  for (const mask of state.masks) {
-    if (isPointInPolygon(position, mask.points)) {
-      return {
-        key: getEditValue(mask.id, "outer"),
-        mask,
-        kind: "outer",
-        holeIndex: 0,
-        points: mask.points,
-      };
-    }
-  }
+  return nearestMatch;
+}
 
-  return null;
+function getEditableTargets() {
+  return state.masks.flatMap((mask) => {
+    const outer = {
+      key: getEditValue(mask.id, "outer"),
+      mask,
+      kind: "outer",
+      holeIndex: 0,
+      points: mask.points,
+    };
+    const holes = mask.holes.map((hole, holeIndex) => ({
+      key: getEditValue(mask.id, "hole", holeIndex),
+      mask,
+      kind: "hole",
+      holeIndex,
+      points: hole,
+    }));
+    return [outer, ...holes];
+  });
+}
+
+function polygonArea(points) {
+  if (!Array.isArray(points) || points.length < 3) return Number.POSITIVE_INFINITY;
+  let area = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    area += current[0] * next[1] - next[0] * current[1];
+  }
+  return Math.abs(area / 2);
 }
 
 function findNearestPoint(points, position) {
-  const hitRadius = Math.max(18, Math.min(state.canvasWidth, state.canvasHeight) * 0.018);
+  const hitRadius = Math.max(26, Math.min(state.canvasWidth, state.canvasHeight) * 0.024);
   let nearest = null;
   let nearestDistance = hitRadius;
 
@@ -2304,7 +2352,7 @@ function findNearestPoint(points, position) {
     const dy = y * state.canvasHeight - position.y;
     const distance = Math.hypot(dx, dy);
     if (distance <= nearestDistance) {
-      nearest = { pointIndex };
+      nearest = { pointIndex, distance };
       nearestDistance = distance;
     }
   });
