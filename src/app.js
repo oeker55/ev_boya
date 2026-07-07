@@ -10,6 +10,14 @@ const DEFAULT_IMAGE_SETTINGS = {
   opacity: 0.4,
   masks: defaultMasks,
 };
+const DEFAULT_PRIMARY_COLOR_INDEX = Math.max(
+  0,
+  COLORS.findIndex((color) => color.name === "Kum Beji")
+);
+const DEFAULT_SECONDARY_COLOR_INDEX = Math.max(
+  0,
+  COLORS.findIndex((color) => color.name === "Antik Beyaz")
+);
 
 const state = {
   image: null,
@@ -17,10 +25,9 @@ const state = {
   imageScale: 1,
   canvasWidth: 1200,
   canvasHeight: 1600,
-  selectedColorIndex: Math.max(
-    0,
-    COLORS.findIndex((color) => color.name === "Kum Beji")
-  ),
+  selectedColorIndex: DEFAULT_PRIMARY_COLOR_INDEX,
+  secondaryColorIndex: DEFAULT_SECONDARY_COLOR_INDEX,
+  activeColorSlot: "primary",
   masks: cloneMasks(defaultMasks),
   images: [],
   currentImage: null,
@@ -61,6 +68,7 @@ const dom = {
   currentName: document.querySelector("#currentName"),
   currentCode: document.querySelector("#currentCode"),
   currentHex: document.querySelector("#currentHex"),
+  colorSlotTabs: document.querySelector("#colorSlotTabs"),
   prevButton: document.querySelector("#prevButton"),
   nextButton: document.querySelector("#nextButton"),
   playButton: document.querySelector("#playButton"),
@@ -123,6 +131,7 @@ async function init() {
 function cloneMasks(masks) {
   return (Array.isArray(masks) ? masks : []).map((mask) => ({
     ...mask,
+    colorSlot: normalizeColorSlot(mask.colorSlot),
     points: Array.isArray(mask.points) ? mask.points.map((point) => [...point]) : [],
     holes: Array.isArray(mask.holes)
       ? mask.holes.map((hole) => hole.map((point) => [...point]))
@@ -139,9 +148,38 @@ function serializeMasks(masks = state.masks) {
     id: mask.id,
     label: mask.label,
     enabled: mask.enabled,
+    colorSlot: normalizeColorSlot(mask.colorSlot),
     points: mask.points.map((point) => [...point]),
     holes: mask.holes.map((hole) => hole.map((point) => [...point])),
   }));
+}
+
+function normalizeColorSlot(slot) {
+  return slot === "secondary" ? "secondary" : "primary";
+}
+
+function getActiveColorIndex() {
+  return state.activeColorSlot === "secondary"
+    ? state.secondaryColorIndex
+    : state.selectedColorIndex;
+}
+
+function setActiveColorIndex(index) {
+  if (state.activeColorSlot === "secondary") {
+    state.secondaryColorIndex = index;
+  } else {
+    state.selectedColorIndex = index;
+  }
+}
+
+function getMaskColorIndex(mask) {
+  return normalizeColorSlot(mask.colorSlot) === "secondary"
+    ? state.secondaryColorIndex
+    : state.selectedColorIndex;
+}
+
+function getColorSlotLabel(slot) {
+  return normalizeColorSlot(slot) === "secondary" ? "Ikinci renk" : "Ana renk";
 }
 
 function canEditProject() {
@@ -251,6 +289,13 @@ function wireControls() {
   dom.prevButton.addEventListener("click", () => stepColor(-1));
   dom.nextButton.addEventListener("click", () => stepColor(1));
   dom.playButton.addEventListener("click", togglePlayback);
+  if (dom.colorSlotTabs) {
+    dom.colorSlotTabs.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-color-slot]");
+      if (!button) return;
+      setActiveColorSlot(button.dataset.colorSlot);
+    });
+  }
 
   dom.speedRange.addEventListener("input", () => {
     state.speed = Number(dom.speedRange.value);
@@ -430,6 +475,7 @@ function wireControls() {
 }
 
 function renderAll() {
+  renderColorSlotControls();
   renderCurrentColor();
   renderPalette();
   // Ensure UI range shows current opacity (percent)
@@ -474,6 +520,25 @@ function renderAreaControls() {
         text.textContent = mask.label;
 
         label.append(input, text);
+        if (canEditProject()) {
+          const slotSelect = document.createElement("select");
+          slotSelect.className = "mask-color-select admin-only";
+          slotSelect.setAttribute("aria-label", `${mask.label} renk hedefi`);
+          slotSelect.innerHTML = `
+            <option value="primary">Ana renk</option>
+            <option value="secondary">Ikinci renk</option>
+          `;
+          slotSelect.value = normalizeColorSlot(mask.colorSlot);
+          slotSelect.addEventListener("click", (event) => {
+            event.stopPropagation();
+          });
+          slotSelect.addEventListener("change", () => {
+            mask.colorSlot = normalizeColorSlot(slotSelect.value);
+            saveMasks();
+            renderCanvas();
+          });
+          label.append(slotSelect);
+        }
         return label;
       })
     );
@@ -510,11 +575,27 @@ function renderAreaControls() {
   dom.editAreaSelect.value = state.editAreaId;
 }
 
+function renderColorSlotControls() {
+  if (!dom.colorSlotTabs) return;
+  dom.colorSlotTabs.querySelectorAll("[data-color-slot]").forEach((button) => {
+    const isActive = normalizeColorSlot(button.dataset.colorSlot) === state.activeColorSlot;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function setActiveColorSlot(slot) {
+  state.activeColorSlot = normalizeColorSlot(slot);
+  renderColorSlotControls();
+  renderCurrentColor();
+  renderPaletteSelection();
+}
+
 function renderCurrentColor() {
-  const color = COLORS[state.selectedColorIndex];
+  const color = COLORS[getActiveColorIndex()];
   dom.currentSwatch.style.backgroundColor = color.hex;
   dom.currentName.textContent = color.name;
-  dom.currentCode.textContent = `Kod ${color.code}`;
+  dom.currentCode.textContent = `${getColorSlotLabel(state.activeColorSlot)} - Kod ${color.code}`;
   dom.currentHex.textContent = color.hex.toUpperCase();
 }
 
@@ -559,7 +640,7 @@ function renderPalette(
     button.className = "swatch";
     button.dataset.colorIndex = String(index);
     button.setAttribute("aria-label", `${color.name}, ${color.code}, ${color.hex}`);
-    if (index === state.selectedColorIndex) {
+    if (index === getActiveColorIndex()) {
       button.classList.add("is-selected");
     }
 
@@ -588,7 +669,7 @@ function renderPalette(
 
 function setColor(index) {
   if (!Number.isInteger(index) || !COLORS[index]) return;
-  state.selectedColorIndex = index;
+  setActiveColorIndex(index);
   renderCurrentColor();
   renderPaletteSelection();
   renderCanvas();
@@ -599,7 +680,7 @@ function renderPaletteSelection() {
     button.classList.remove("is-selected");
   });
 
-  const selected = dom.swatchGrid.querySelector(`[data-color-index="${state.selectedColorIndex}"]`);
+  const selected = dom.swatchGrid.querySelector(`[data-color-index="${getActiveColorIndex()}"]`);
   if (selected) {
     selected.classList.add("is-selected");
   }
@@ -693,7 +774,7 @@ function stepColor(direction) {
   const filtered = getFilteredColors();
   if (!filtered.length) return;
 
-  const currentPosition = filtered.findIndex(({ index }) => index === state.selectedColorIndex);
+  const currentPosition = filtered.findIndex(({ index }) => index === getActiveColorIndex());
   const nextPosition =
     currentPosition === -1 ? 0 : (currentPosition + direction + filtered.length) % filtered.length;
 
@@ -1197,10 +1278,9 @@ function renderCanvas() {
 }
 
 function paintMasks() {
-  const color = COLORS[state.selectedColorIndex];
-
   for (const mask of state.masks) {
     if (!mask.enabled) continue;
+    const color = COLORS[getMaskColorIndex(mask)] || COLORS[state.selectedColorIndex];
     const path = buildMaskPath(mask);
 
     ctx.save();
@@ -1659,6 +1739,7 @@ function finishDraft() {
       id,
       label,
       enabled: true,
+      colorSlot: state.activeColorSlot,
       points: state.draft.points.map((point) => [...point]),
       holes: [],
     });
@@ -2070,7 +2151,7 @@ function clamp(value, min, max) {
 }
 
 function downloadCanvas() {
-  const color = COLORS[state.selectedColorIndex];
+  const color = COLORS[getActiveColorIndex()];
   const imageName = state.currentImage?.name ? slugify(state.currentImage.name) : "ev";
   const anchor = document.createElement("a");
   anchor.download = `${imageName}-renk-${slugify(color.name)}-${color.code}.png`;

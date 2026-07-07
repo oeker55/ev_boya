@@ -93,6 +93,7 @@ export async function POST(request, context) {
       id: `ai-${Date.now()}-${index + 1}`,
       label: mask.label || `AI boya alanı ${index + 1}`,
       enabled: true,
+      colorSlot: "primary",
       points: mask.points,
       holes: mask.holes || [],
     }));

@@ -105,6 +105,26 @@ export default function PaintPage() {
                 </p>
               </div>
             </div>
+            <div id="colorSlotTabs" className="color-slot-tabs" role="group" aria-label="Renk hedefi">
+              <button
+                className="slot-button is-active"
+                type="button"
+                data-color-slot="primary"
+                aria-pressed="true"
+              >
+                <i data-lucide="paintbrush" aria-hidden="true" />
+                <span>Ana renk</span>
+              </button>
+              <button
+                className="slot-button"
+                type="button"
+                data-color-slot="secondary"
+                aria-pressed="false"
+              >
+                <i data-lucide="square" aria-hidden="true" />
+                <span>Ikinci renk</span>
+              </button>
+            </div>
             <div className="step-row">
               <button
                 className="icon-button"
