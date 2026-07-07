@@ -41,6 +41,56 @@ test("renders palette and painted canvas", async ({ page }) => {
   await page.screenshot({ path: "test-results/smoke.png", fullPage: true });
 });
 
+test("mobile color picker stays on top of the preview", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/", { waitUntil: "networkidle" });
+
+  await page.locator("#currentSwatch").click();
+  await expect(page.locator(".color-popup-overlay")).toBeVisible();
+  await page.waitForFunction(() => document.querySelectorAll(".color-popup-grid .swatch").length > 1000);
+
+  const layout = await page.evaluate(() => {
+    const overlay = document.querySelector(".color-popup-overlay");
+    const popup = document.querySelector(".color-popup");
+    const grid = document.querySelector(".color-popup-grid");
+    const swatch = grid.querySelector(".swatch");
+    const overlayBox = overlay.getBoundingClientRect();
+    const popupBox = popup.getBoundingClientRect();
+    const gridBox = grid.getBoundingClientRect();
+    const swatchBox = swatch.getBoundingClientRect();
+    const hitTarget = document.elementFromPoint(
+      swatchBox.left + swatchBox.width / 2,
+      swatchBox.top + swatchBox.height / 2
+    );
+
+    return {
+      viewportHeight: window.innerHeight,
+      overlayTop: overlayBox.top,
+      overlayBottom: overlayBox.bottom,
+      popupBottom: popupBox.bottom,
+      gridHeight: gridBox.height,
+      gridScrollHeight: grid.scrollHeight,
+      overlayZ: Number(window.getComputedStyle(overlay).zIndex),
+      bodyHasModal: document.body.classList.contains("has-modal"),
+      hitPopupSwatch: Boolean(hitTarget?.closest(".color-popup-grid .swatch")),
+    };
+  });
+
+  expect(layout.bodyHasModal).toBe(true);
+  expect(layout.overlayZ).toBeGreaterThanOrEqual(1000);
+  expect(layout.overlayTop).toBeLessThanOrEqual(1);
+  expect(Math.abs(layout.overlayBottom - layout.viewportHeight)).toBeLessThanOrEqual(2);
+  expect(Math.abs(layout.popupBottom - layout.viewportHeight)).toBeLessThanOrEqual(2);
+  expect(layout.gridScrollHeight).toBeGreaterThan(layout.gridHeight);
+  expect(layout.hitPopupSwatch).toBe(true);
+  expect(pageErrors).toEqual([]);
+
+  await page.screenshot({ path: "test-results/mobile-color-popup.png", fullPage: true });
+});
+
 test("protects admin panel and opens the selected image after login", async ({ page }) => {
   test.skip(!process.env.MONGODB_URI, "Admin API requires MONGODB_URI");
 

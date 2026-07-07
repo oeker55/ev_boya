@@ -764,11 +764,39 @@ function renderPaletteSelection() {
 
 // Mobile color picker popup (lazy-created)
 let _colorPopup = null;
+let _colorPopupScrollY = 0;
+
+function syncColorPopupViewportHeight() {
+  const viewportHeight =
+    window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight;
+  document.documentElement.style.setProperty("--color-popup-vh", `${viewportHeight}px`);
+}
+
+function lockPageForColorPopup() {
+  _colorPopupScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  syncColorPopupViewportHeight();
+  document.body.style.top = `-${_colorPopupScrollY}px`;
+  document.body.classList.add("has-modal");
+  window.addEventListener("resize", syncColorPopupViewportHeight);
+  window.visualViewport?.addEventListener("resize", syncColorPopupViewportHeight);
+}
+
+function unlockPageForColorPopup() {
+  window.removeEventListener("resize", syncColorPopupViewportHeight);
+  window.visualViewport?.removeEventListener("resize", syncColorPopupViewportHeight);
+  document.body.classList.remove("has-modal");
+  document.body.style.top = "";
+  document.documentElement.style.removeProperty("--color-popup-vh");
+  window.scrollTo(0, _colorPopupScrollY);
+}
+
 function openColorPickerPopup() {
   if (_colorPopup) return _colorPopup.show();
 
   const overlay = document.createElement("div");
   overlay.className = "color-popup-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
 
   const panel = document.createElement("div");
   panel.className = "color-popup";
@@ -824,11 +852,13 @@ function openColorPickerPopup() {
   _colorPopup = {
     overlay,
     show() {
-      document.body.classList.add("has-modal");
+      lockPageForColorPopup();
       overlay.classList.add("is-open");
       search.value = "";
       onSearch();
-      search.focus();
+      if (window.matchMedia?.("(pointer: fine)").matches) {
+        search.focus({ preventScroll: true });
+      }
     },
     close() {
       closeColorPickerPopup();
@@ -843,7 +873,7 @@ function closeColorPickerPopup() {
   if (!_colorPopup) return;
   _colorPopup.overlay.remove();
   _colorPopup = null;
-  document.body.classList.remove("has-modal");
+  unlockPageForColorPopup();
 }
 
 function stepColor(direction) {
