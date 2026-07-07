@@ -1,11 +1,12 @@
 # Ayvatullu Ev Boya
 
-Bu proje, ev boyama çalışmaları için renkleri tek bir ev fotoğrafına uygulamak üzere hazırlanmış statik bir web aracıdır.
+Ev fotoğrafları için renk önizleme ve maske düzenleme aracı.
 
-- Renk verisi kartela kaynağından alınır: https://biancastella.com.tr/kartela/
-- Sabit fotoğraf yolu: `public/ev.jpg`
-- Cephe maskelerini açıp kapatabilir, dış çizgiyi ve pencere/kapı boşluklarını sürükleyerek ayarlayabilirsin.
-- Seçili rengi PNG olarak indirebilirsin.
+- Public kullanıcılar `/resimId` adresinden sadece ilgili resmi ve renk denemesini görür.
+- Admin paneli `/admin` adresindedir.
+- Varsayılan admin bilgisi: `admin` / `evrenk2026`
+- Upload edilen görseller `public/uploads` içine yazılır.
+- Resim bazlı maske ve boya yoğunluğu ayarları `data/images.json` dosyasında tutulur.
 
 Yerel çalıştırma:
 
@@ -13,6 +14,13 @@ Yerel çalıştırma:
 npm run dev
 ```
 
-Sonra tarayıcıdan `http://localhost:5173` adresini aç.
+Sonra `http://localhost:5173` veya `http://localhost:5173/admin` adresini aç.
 
-Netlify ayarı `netlify.toml` içinde hazırdır: build komutu `npm run build`, yayın klasörü `dist`.
+Build:
+
+```powershell
+npm run build
+npm start
+```
+
+Admin bilgilerini build almadan önce `server.js` içinden veya `ADMIN_USERNAME` / `ADMIN_PASSWORD` ortam değişkenleriyle değiştirebilirsin.

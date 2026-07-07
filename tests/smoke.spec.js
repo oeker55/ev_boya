@@ -4,11 +4,11 @@ test("renders palette and painted canvas", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
-  await page.goto("http://localhost:5173/", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
 
   await expect(page.getByRole("heading", { name: "Ayvatullu Ev Boya" })).toBeVisible();
   await page.waitForFunction(() => document.querySelectorAll(".swatch").length > 1000);
-  await expect(page.locator("#areaToggles")).toContainText("Boya alanı 1");
+  await expect(page.locator("#areaToggles")).toContainText(/Boya alan/);
 
   const canvasStats = await page.locator("#paintCanvas").evaluate((canvas) => {
     const context = canvas.getContext("2d");
@@ -35,11 +35,33 @@ test("renders palette and painted canvas", async ({ page }) => {
   expect(canvasStats.coloredPixels).toBeGreaterThan(100);
   expect(pageErrors).toEqual([]);
 
-  await page.locator("#editMaskToggle").check();
-  await expect(page.locator("#maskToggle")).toBeChecked();
-  await page.locator("#maskToggle").uncheck();
-  await expect(page.locator("#editMaskToggle")).not.toBeChecked();
-  await expect(page.locator("#paintCanvas")).not.toHaveClass(/is-editing/);
+  await expect(page.locator("#editMaskToggle")).toBeHidden();
+  await expect(page.locator("#opacityRange")).toBeDisabled();
 
   await page.screenshot({ path: "test-results/smoke.png", fullPage: true });
+});
+
+test("protects admin panel and opens the selected image after login", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.goto("/admin", { waitUntil: "networkidle" });
+
+  await expect(page.locator("#adminOverlay")).toBeVisible();
+  await expect(page.locator("#adminPanel")).toBeHidden();
+
+  await page.locator("#loginUsername").fill("admin");
+  await page.locator("#loginPassword").fill("evrenk2026");
+  await page.locator("#loginForm").getByRole("button").click();
+
+  await expect(page.locator("#adminOverlay")).toBeHidden();
+  await expect(page.locator("#adminPanel")).toBeVisible();
+  await expect(page.locator('#imageList [data-image-id="ev"]')).toBeVisible();
+  await expect(page.locator("#opacityRange")).toBeEnabled();
+  await expect(page.locator("body")).toHaveClass(/is-admin/);
+
+  await page.locator("#publicLinkButton").click();
+  await expect(page).toHaveURL(/\/ev$/);
+  await expect(page.locator("body")).not.toHaveClass(/is-admin/);
+  expect(pageErrors).toEqual([]);
 });

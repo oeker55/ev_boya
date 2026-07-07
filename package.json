@@ -4,8 +4,8 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "start": "vite --host 0.0.0.0",
+    "dev": "node server.js --dev",
+    "start": "node server.js",
     "build": "vite build",
     "test": "playwright test tests/smoke.spec.js --project=chrome --reporter=line"
   },

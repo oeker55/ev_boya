@@ -1,9 +1,15 @@
 import { COLORS, FAMILIES, PALETTE_SOURCE } from "./bianca-colors.js";
 import { defaultMasks } from "./defaultMasks.js";
 
-const STORAGE_KEY = "bianca-house-simulator-masks-v4";
 const MAX_CANVAS_SIDE = 2200;
-const HOUSE_IMAGE_SRC = "/ev.jpg";
+const DEFAULT_IMAGE_ID = "ev";
+const DEFAULT_IMAGE_SETTINGS = {
+  id: DEFAULT_IMAGE_ID,
+  name: "ev.jpg",
+  src: "/ev.jpg",
+  opacity: 0.4,
+  masks: defaultMasks,
+};
 
 const state = {
   image: null,
@@ -15,7 +21,15 @@ const state = {
     0,
     COLORS.findIndex((color) => color.name === "Kum Beji")
   ),
-  masks: loadMasks(),
+  masks: cloneMasks(defaultMasks),
+  images: [],
+  currentImage: null,
+  isAdminRoute:
+    window.location.pathname === "/admin" || window.location.pathname.startsWith("/admin/"),
+  isAuthenticated: false,
+  isSaving: false,
+  saveTimer: null,
+  saveAgain: false,
   filterText: "",
   family: "Tümü",
   showOriginal: false,
@@ -37,6 +51,8 @@ const dom = {
   canvas: document.querySelector("#paintCanvas"),
   photoName: document.querySelector("#photoName"),
   canvasSize: document.querySelector("#canvasSize"),
+  adminLink: document.querySelector("#adminLink"),
+  publicLinkButton: document.querySelector("#publicLinkButton"),
   downloadButton: document.querySelector("#downloadButton"),
   downloadButtonMobile: document.querySelector("#downloadButtonMobile"),
   originalToggle: document.querySelector("#originalToggle"),
@@ -72,6 +88,18 @@ const dom = {
   swatchGrid: document.querySelector("#swatchGrid"),
   resultCount: document.querySelector("#resultCount"),
   sourceLink: document.querySelector("#sourceLink"),
+  adminOverlay: document.querySelector("#adminOverlay"),
+  loginForm: document.querySelector("#loginForm"),
+  loginUsername: document.querySelector("#loginUsername"),
+  loginPassword: document.querySelector("#loginPassword"),
+  loginStatus: document.querySelector("#loginStatus"),
+  adminPanel: document.querySelector("#adminPanel"),
+  uploadForm: document.querySelector("#uploadForm"),
+  uploadInput: document.querySelector("#uploadInput"),
+  imageList: document.querySelector("#imageList"),
+  saveStatus: document.querySelector("#saveStatus"),
+  copyPublicLinkButton: document.querySelector("#copyPublicLinkButton"),
+  logoutButton: document.querySelector("#logoutButton"),
 };
 
 const ctx = dom.canvas.getContext("2d", { willReadFrequently: false });
@@ -79,11 +107,12 @@ let playTimer = null;
 
 async function init() {
   dom.sourceLink.href = PALETTE_SOURCE;
-  state.image = await loadHouseImage();
   wireControls();
   renderFamilyOptions();
+  await loadInitialProject();
   renderAreaControls();
   renderAll();
+  syncAdminUi();
 
   if (window.lucide) {
     window.lucide.createIcons();
@@ -91,55 +120,113 @@ async function init() {
 }
 
 function cloneMasks(masks) {
-  return masks.map((mask) => ({
+  return (Array.isArray(masks) ? masks : []).map((mask) => ({
     ...mask,
+    points: Array.isArray(mask.points) ? mask.points.map((point) => [...point]) : [],
+    holes: Array.isArray(mask.holes)
+      ? mask.holes.map((hole) => hole.map((point) => [...point]))
+      : [],
+  }));
+}
+
+function saveMasks() {
+  queueImageSave();
+}
+
+function serializeMasks(masks = state.masks) {
+  return masks.map((mask) => ({
+    id: mask.id,
+    label: mask.label,
+    enabled: mask.enabled,
     points: mask.points.map((point) => [...point]),
     holes: mask.holes.map((hole) => hole.map((point) => [...point])),
   }));
 }
 
-function loadMasks() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (!Array.isArray(stored)) {
-      return cloneMasks(defaultMasks);
-    }
+function canEditProject() {
+  return state.isAdminRoute && state.isAuthenticated;
+}
 
-    return stored
-      .map((saved, index) => ({
-        id: saved.id || `paint-${index + 1}`,
-        label: saved.label || `Boya alanı ${index + 1}`,
-        enabled: saved.enabled ?? true,
-        points: Array.isArray(saved.points) ? saved.points.map((point) => [...point]) : [],
-        holes: Array.isArray(saved.holes)
-          ? saved.holes.map((hole) => hole.map((point) => [...point]))
-          : [],
-      }))
-      .filter((mask) => mask.points.length >= 3);
-  } catch {
-    return cloneMasks(defaultMasks);
+function queueImageSave() {
+  if (!canEditProject() || !state.currentImage) return;
+
+  state.currentImage.opacity = state.opacity;
+  state.currentImage.masks = serializeMasks();
+  window.clearTimeout(state.saveTimer);
+  state.saveTimer = window.setTimeout(() => {
+    persistCurrentImage();
+  }, 450);
+  setSaveStatus("Kaydedilecek");
+}
+
+async function persistCurrentImage() {
+  if (!canEditProject() || !state.currentImage) return;
+  if (state.isSaving) {
+    state.saveAgain = true;
+    return;
+  }
+
+  state.isSaving = true;
+  setSaveStatus("Kaydediliyor");
+
+  try {
+    const { image } = await apiRequest(`/api/images/${encodeURIComponent(state.currentImage.id)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        opacity: state.opacity,
+        masks: serializeMasks(),
+      }),
+    });
+    state.currentImage = normalizeImageSettings(image);
+    replaceImageInList(state.currentImage);
+    renderAdminImageList();
+    setSaveStatus("Kaydedildi");
+  } catch (error) {
+    setSaveStatus(error.message || "Kaydedilemedi", true);
+  } finally {
+    state.isSaving = false;
+    if (state.saveAgain) {
+      state.saveAgain = false;
+      queueImageSave();
+    }
   }
 }
 
-function saveMasks() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(
-      state.masks.map((mask) => ({
-        id: mask.id,
-        label: mask.label,
-        enabled: mask.enabled,
-        points: mask.points,
-        holes: mask.holes,
-      }))
-    )
-  );
+function setSaveStatus(message, isError = false) {
+  if (!dom.saveStatus) return;
+  dom.saveStatus.textContent = message || "";
+  dom.saveStatus.classList.toggle("is-error", isError);
 }
 
 function wireControls() {
   dom.downloadButton.addEventListener("click", downloadCanvas);
   if (dom.downloadButtonMobile) {
     dom.downloadButtonMobile.addEventListener("click", downloadCanvas);
+  }
+  if (dom.publicLinkButton) {
+    dom.publicLinkButton.addEventListener("click", () => {
+      if (!state.currentImage) return;
+      window.location.href = getPublicPath(state.currentImage.id);
+    });
+  }
+  if (dom.loginForm) {
+    dom.loginForm.addEventListener("submit", handleLogin);
+  }
+  if (dom.uploadForm) {
+    dom.uploadForm.addEventListener("submit", handleUpload);
+  }
+  if (dom.imageList) {
+    dom.imageList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-image-id]");
+      if (!button) return;
+      selectAdminImage(button.dataset.imageId);
+    });
+  }
+  if (dom.copyPublicLinkButton) {
+    dom.copyPublicLinkButton.addEventListener("click", copyPublicLink);
+  }
+  if (dom.logoutButton) {
+    dom.logoutButton.addEventListener("click", handleLogout);
   }
 
   dom.originalToggle.addEventListener("change", () => {
@@ -171,10 +258,16 @@ function wireControls() {
 
   dom.opacityRange.addEventListener("input", () => {
     state.opacity = Number(dom.opacityRange.value) / 100;
+    saveMasks();
     renderCanvas();
   });
 
   dom.editMaskToggle.addEventListener("change", () => {
+    if (!canEditProject()) {
+      state.editMode = false;
+      dom.editMaskToggle.checked = false;
+      return;
+    }
     state.editMode = dom.editMaskToggle.checked;
     state.showMask = state.editMode;
     resetEditInteraction();
@@ -244,6 +337,7 @@ function wireControls() {
   });
 
   dom.clearMaskButton.addEventListener("click", () => {
+    if (!canEditProject()) return;
     state.masks = [];
     state.editAreaId = "";
     state.activePoint = null;
@@ -257,11 +351,13 @@ function wireControls() {
   });
 
   dom.exportMaskButton.addEventListener("click", () => {
+    if (!canEditProject()) return;
     copyMaskExport();
   });
 
   dom.resetMaskButton.addEventListener("click", () => {
-    state.masks = cloneMasks(defaultMasks);
+    if (!canEditProject()) return;
+    state.masks = state.currentImage?.id === DEFAULT_IMAGE_ID ? cloneMasks(defaultMasks) : [];
     state.activePoint = null;
     state.moveMode = false;
     state.draft = null;
@@ -350,27 +446,34 @@ function renderFamilyOptions() {
 }
 
 function renderAreaControls() {
-  dom.areaToggles.replaceChildren(
-    ...state.masks.map((mask) => {
-      const label = document.createElement("label");
-      label.className = "area-toggle";
+  if (!state.masks.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-result";
+    empty.textContent = "Boya alanı yok";
+    dom.areaToggles.replaceChildren(empty);
+  } else {
+    dom.areaToggles.replaceChildren(
+      ...state.masks.map((mask) => {
+        const label = document.createElement("label");
+        label.className = "area-toggle";
 
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = mask.enabled;
-      input.addEventListener("change", () => {
-        mask.enabled = input.checked;
-        saveMasks();
-        renderCanvas();
-      });
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = mask.enabled;
+        input.addEventListener("change", () => {
+          mask.enabled = input.checked;
+          saveMasks();
+          renderCanvas();
+        });
 
-      const text = document.createElement("span");
-      text.textContent = mask.label;
+        const text = document.createElement("span");
+        text.textContent = mask.label;
 
-      label.append(input, text);
-      return label;
-    })
-  );
+        label.append(input, text);
+        return label;
+      })
+    );
+  }
 
   dom.editAreaSelect.replaceChildren(
     ...state.masks.flatMap((mask) => {
@@ -642,15 +745,291 @@ function loadImage(src) {
   });
 }
 
-async function loadHouseImage() {
-  try {
-    const image = await loadImage(`${HOUSE_IMAGE_SRC}?v=${Date.now()}`);
-    state.photoName = "ev.jpg";
-    return image;
-  } catch {
-    state.photoName = "assets/ev.jpg bulunamadı";
-    return createGuideImage();
+async function loadInitialProject() {
+  if (state.isAdminRoute) {
+    await refreshSession();
+    if (state.isAuthenticated) {
+      await loadAdminImages();
+      const selectedId = new URLSearchParams(window.location.search).get("image");
+      await selectAdminImage(selectedId || state.images[0]?.id || DEFAULT_IMAGE_ID, false);
+      return;
+    }
   }
+
+  await loadPublicImage(getRequestedImageId());
+}
+
+async function refreshSession() {
+  try {
+    const session = await apiRequest("/api/session");
+    state.isAuthenticated = Boolean(session.authenticated);
+  } catch {
+    state.isAuthenticated = false;
+  }
+  syncAdminUi();
+}
+
+async function loadAdminImages() {
+  const { images } = await apiRequest("/api/images");
+  state.images = Array.isArray(images) ? images.map(normalizeImageSettings) : [];
+  renderAdminImageList();
+}
+
+async function selectAdminImage(id, updateUrl = true) {
+  const imageId = id || DEFAULT_IMAGE_ID;
+  let settings = state.images.find((image) => image.id === imageId);
+  if (!settings) {
+    const response = await apiRequest(`/api/images/${encodeURIComponent(imageId)}`);
+    settings = normalizeImageSettings(response.image);
+    replaceImageInList(settings);
+  }
+
+  if (updateUrl) {
+    const url = new URL(window.location.href);
+    url.pathname = "/admin";
+    url.searchParams.set("image", settings.id);
+    window.history.replaceState({}, "", url);
+  }
+
+  await applyImageSettings(settings);
+  renderAdminImageList();
+}
+
+async function loadPublicImage(id) {
+  try {
+    const { image } = await apiRequest(`/api/images/${encodeURIComponent(id || DEFAULT_IMAGE_ID)}`);
+    await applyImageSettings(normalizeImageSettings(image));
+  } catch {
+    await applyImageSettings(normalizeImageSettings(DEFAULT_IMAGE_SETTINGS));
+  }
+}
+
+async function applyImageSettings(settings) {
+  const normalized = normalizeImageSettings(settings);
+  state.currentImage = normalized;
+  state.photoName = normalized.name;
+  state.opacity = normalized.opacity;
+  state.masks = cloneMasks(normalized.masks);
+  state.editAreaId = state.masks[0] ? getEditValue(state.masks[0].id, "outer") : "";
+  state.activePoint = null;
+  state.hoverPoint = null;
+  state.pointerPosition = null;
+  state.moveMode = false;
+  state.draft = null;
+  state.drag = null;
+  state.editMode = false;
+  state.showMask = false;
+  if (dom.editMaskToggle) dom.editMaskToggle.checked = false;
+  if (dom.maskToggle) dom.maskToggle.checked = false;
+
+  try {
+    const cacheKey = normalized.updatedAt ? encodeURIComponent(normalized.updatedAt) : Date.now();
+    state.image = await loadImage(`${normalized.src}?v=${cacheKey}`);
+  } catch {
+    state.photoName = `${normalized.name} bulunamadı`;
+    state.image = await createGuideImage();
+  }
+
+  renderAreaControls();
+  renderAll();
+  syncAdminUi();
+}
+
+function normalizeImageSettings(image) {
+  const fallback = DEFAULT_IMAGE_SETTINGS;
+  const masks = Array.isArray(image?.masks) ? image.masks : fallback.masks;
+  return {
+    id: String(image?.id || fallback.id),
+    name: String(image?.name || fallback.name),
+    src: String(image?.src || fallback.src),
+    opacity: clamp(Number(image?.opacity ?? fallback.opacity), 0.2, 1),
+    masks: cloneMasks(masks).filter((mask) => mask.points.length >= 3),
+    createdAt: image?.createdAt || "",
+    updatedAt: image?.updatedAt || "",
+  };
+}
+
+function getRequestedImageId() {
+  const segment = window.location.pathname.split("/").filter(Boolean)[0];
+  if (!segment || segment === "admin") return DEFAULT_IMAGE_ID;
+  return decodeURIComponent(segment);
+}
+
+function replaceImageInList(image) {
+  const index = state.images.findIndex((item) => item.id === image.id);
+  if (index === -1) {
+    state.images.unshift(image);
+  } else {
+    state.images[index] = image;
+  }
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const body = options.body;
+  if (body && !(body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    ...options,
+    headers,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "İstek tamamlanamadı");
+  }
+  return payload;
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  if (!dom.loginForm) return;
+
+  setLoginStatus("Giriş yapılıyor");
+  try {
+    const session = await apiRequest("/api/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username: dom.loginUsername.value,
+        password: dom.loginPassword.value,
+      }),
+    });
+    state.isAuthenticated = Boolean(session.authenticated);
+    dom.loginPassword.value = "";
+    await loadAdminImages();
+    await selectAdminImage(state.images[0]?.id || DEFAULT_IMAGE_ID);
+    syncAdminUi();
+    setLoginStatus("");
+  } catch (error) {
+    setLoginStatus(error.message || "Giriş yapılamadı", true);
+  }
+}
+
+async function handleLogout() {
+  await apiRequest("/api/logout", { method: "POST" }).catch(() => {});
+  state.isAuthenticated = false;
+  state.editMode = false;
+  syncAdminUi();
+}
+
+async function handleUpload(event) {
+  event.preventDefault();
+  if (!canEditProject() || !dom.uploadInput.files.length) return;
+
+  const formData = new FormData();
+  formData.append("image", dom.uploadInput.files[0]);
+  setSaveStatus("Yükleniyor");
+
+  try {
+    const { image } = await apiRequest("/api/images/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const normalized = normalizeImageSettings(image);
+    replaceImageInList(normalized);
+    dom.uploadInput.value = "";
+    await selectAdminImage(normalized.id);
+    setSaveStatus("Yüklendi");
+  } catch (error) {
+    setSaveStatus(error.message || "Yüklenemedi", true);
+  }
+}
+
+function renderAdminImageList() {
+  if (!dom.imageList) return;
+
+  if (!state.images.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-result";
+    empty.textContent = "Resim yok";
+    dom.imageList.replaceChildren(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const image of state.images) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "image-list-item";
+    button.dataset.imageId = image.id;
+    button.classList.toggle("is-selected", image.id === state.currentImage?.id);
+
+    const thumb = document.createElement("span");
+    thumb.className = "image-list-thumb";
+    thumb.style.backgroundImage = `url("${image.src}")`;
+
+    const text = document.createElement("span");
+    text.className = "image-list-text";
+
+    const name = document.createElement("strong");
+    name.textContent = image.name;
+
+    const meta = document.createElement("span");
+    meta.textContent = `/${image.id}`;
+
+    text.append(name, meta);
+    button.append(thumb, text);
+    fragment.append(button);
+  }
+
+  dom.imageList.replaceChildren(fragment);
+}
+
+function syncAdminUi() {
+  document.body.classList.toggle("is-admin-route", state.isAdminRoute);
+  document.body.classList.toggle("is-admin", canEditProject());
+
+  if (dom.adminOverlay) {
+    dom.adminOverlay.hidden = !state.isAdminRoute || state.isAuthenticated;
+  }
+  if (dom.adminPanel) {
+    dom.adminPanel.hidden = !canEditProject();
+  }
+  if (dom.publicLinkButton) {
+    dom.publicLinkButton.hidden = !canEditProject();
+  }
+  if (dom.logoutButton) {
+    dom.logoutButton.hidden = !canEditProject();
+  }
+  if (dom.adminLink) {
+    dom.adminLink.hidden = canEditProject();
+  }
+
+  if (!canEditProject()) {
+    state.editMode = false;
+    state.moveMode = false;
+    state.draft = null;
+    if (dom.editMaskToggle) dom.editMaskToggle.checked = false;
+    resetEditInteraction();
+  }
+
+  if (dom.opacityRange) {
+    dom.opacityRange.disabled = !canEditProject();
+  }
+  renderAdminImageList();
+}
+
+function setLoginStatus(message, isError = false) {
+  if (!dom.loginStatus) return;
+  dom.loginStatus.textContent = message || "";
+  dom.loginStatus.classList.toggle("is-error", isError);
+}
+
+async function copyPublicLink() {
+  if (!state.currentImage) return;
+  const link = `${window.location.origin}${getPublicPath(state.currentImage.id)}`;
+  try {
+    await navigator.clipboard.writeText(link);
+    setSaveStatus("Link kopyalandı");
+  } catch {
+    window.prompt("Public link", link);
+  }
+}
+
+function getPublicPath(id) {
+  return `/${encodeURIComponent(id || DEFAULT_IMAGE_ID)}`;
 }
 
 function createGuideImage() {
@@ -1004,7 +1383,7 @@ function addPolygon(path, points) {
 }
 
 function startMaskDrag(event) {
-  if (!state.editMode) return;
+  if (!state.editMode || !canEditProject()) return;
 
   const position = getCanvasPosition(event);
   state.pointerPosition = position;
@@ -1149,7 +1528,7 @@ function getEditTarget() {
 }
 
 function addPointAtLongestEdge() {
-  if (!state.editMode) return;
+  if (!state.editMode || !canEditProject()) return;
   const target = getEditTarget();
   const edge = findLongestEdge(target.points);
   if (!edge) return;
@@ -1165,7 +1544,7 @@ function addPointAtLongestEdge() {
 }
 
 function addNoPaintArea() {
-  if (!state.editMode) return;
+  if (!state.editMode || !canEditProject()) return;
   const target = getEditTarget();
   const sourceBox = getPointBounds(target.points);
   const width = Math.min(Math.max(sourceBox.wp * 0.38, 0.055), 0.13);
@@ -1189,6 +1568,7 @@ function addNoPaintArea() {
 }
 
 function startDraft(kind) {
+  if (!canEditProject()) return;
   state.editMode = true;
   state.showMask = true;
   dom.editMaskToggle.checked = true;
@@ -1223,6 +1603,7 @@ function addDraftPoint(position) {
 }
 
 function finishDraft() {
+  if (!canEditProject()) return;
   if (!state.draft) return;
   if (state.draft.points.length < 3) {
     cancelDraft();
@@ -1261,6 +1642,7 @@ function finishDraft() {
 }
 
 function cancelDraft() {
+  if (!canEditProject()) return;
   state.draft = null;
   state.pointerPosition = null;
   dom.canvas.classList.remove("is-drawing");
@@ -1269,7 +1651,7 @@ function cancelDraft() {
 }
 
 function deleteActivePoint() {
-  if (!state.editMode) return;
+  if (!state.editMode || !canEditProject()) return;
   const target = getEditTarget();
   if (!state.activePoint || state.activePoint.targetKey !== target.key) return;
   if (target.points.length <= 3) return;
@@ -1282,7 +1664,7 @@ function deleteActivePoint() {
 }
 
 function deleteSelectedNoPaintArea() {
-  if (!state.editMode) return;
+  if (!state.editMode || !canEditProject()) return;
   const target = getEditTarget();
   if (target.kind !== "hole") return;
 
@@ -1296,6 +1678,7 @@ function deleteSelectedNoPaintArea() {
 }
 
 function nudgeActivePoint(dx, dy) {
+  if (!canEditProject()) return;
   const target = getEditTarget();
   if (!state.activePoint || state.activePoint.targetKey !== target.key) return;
 
@@ -1308,7 +1691,7 @@ function nudgeActivePoint(dx, dy) {
 }
 
 function nudgeEditTarget(dx, dy) {
-  if (!state.editMode) return;
+  if (!state.editMode || !canEditProject()) return;
   const target = getEditTarget();
   const groups = getMovePointGroups(target);
   const nx = dx / state.canvasWidth;
@@ -1346,7 +1729,7 @@ function resetEditInteraction() {
 }
 
 function syncEditTools() {
-  const disabled = !state.editMode;
+  const disabled = !state.editMode || !canEditProject();
   const target = state.editMode ? getEditTarget() : null;
   const targetText = getTargetPositionText();
   dom.targetPosition.textContent = targetText;
@@ -1646,8 +2029,9 @@ function clamp(value, min, max) {
 
 function downloadCanvas() {
   const color = COLORS[state.selectedColorIndex];
+  const imageName = state.currentImage?.name ? slugify(state.currentImage.name) : "ev";
   const anchor = document.createElement("a");
-  anchor.download = `ev-renk-${slugify(color.name)}-${color.code}.png`;
+  anchor.download = `${imageName}-renk-${slugify(color.name)}-${color.code}.png`;
   anchor.href = dom.canvas.toDataURL("image/png");
   anchor.click();
 }

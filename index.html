@@ -20,9 +20,20 @@
         </div>
 
         <div class="top-actions">
+          <a class="button" id="adminLink" href="/admin">
+            <i data-lucide="lock-keyhole" aria-hidden="true"></i>
+            <span>Yönetim</span>
+          </a>
+          <button class="button" id="publicLinkButton" type="button" hidden>
+            <i data-lucide="external-link" aria-hidden="true"></i>
+            <span>Public görünüm</span>
+          </button>
           <button class="button" id="downloadButton" type="button">
             <i data-lucide="download" aria-hidden="true"></i>
             <span>PNG indir</span>
+          </button>
+          <button class="icon-button" id="logoutButton" type="button" aria-label="Çıkış" hidden>
+            <i data-lucide="log-out" aria-hidden="true"></i>
           </button>
         </div>
       </header>
@@ -52,6 +63,29 @@
         </section>
 
         <aside class="control-panel" aria-label="Renk ve maske kontrolleri">
+          <section class="control-section admin-section" id="adminPanel" hidden>
+            <div class="section-heading">
+              <span>Resim paneli</span>
+              <button class="link-button" id="copyPublicLinkButton" type="button">
+                <i data-lucide="copy" aria-hidden="true"></i>
+                Link
+              </button>
+            </div>
+            <form id="uploadForm" class="upload-form">
+              <label class="file-drop">
+                <i data-lucide="upload" aria-hidden="true"></i>
+                <span>Resim seç</span>
+                <input id="uploadInput" type="file" accept="image/*" />
+              </label>
+              <button class="button button-primary" type="submit">
+                <i data-lucide="cloud-upload" aria-hidden="true"></i>
+                <span>Yükle</span>
+              </button>
+            </form>
+            <div id="imageList" class="image-list"></div>
+            <output id="saveStatus" class="save-status"></output>
+          </section>
+
           <section class="control-section current-section">
             <div class="section-heading">
               <span>Seçili renk</span>
@@ -101,7 +135,7 @@
               </button>
             </div>
             <div id="areaToggles" class="area-toggles"></div>
-            <label class="range-field">
+            <label class="range-field intensity-field">
               <span>Boya yoğunluğu</span>
               <input id="opacityRange" type="range" min="20" max="100" step="1" value="100" />
             </label>
@@ -254,6 +288,27 @@
           <span>PNG indir</span>
         </button>
       </div>
+    </div>
+    <div class="admin-overlay" id="adminOverlay" hidden>
+      <form class="login-panel" id="loginForm">
+        <div class="login-heading">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <strong>Yönetim</strong>
+        </div>
+        <label>
+          <span>Kullanıcı adı</span>
+          <input id="loginUsername" type="text" autocomplete="username" value="admin" />
+        </label>
+        <label>
+          <span>Şifre</span>
+          <input id="loginPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="button button-primary" type="submit">
+          <i data-lucide="log-in" aria-hidden="true"></i>
+          <span>Giriş yap</span>
+        </button>
+        <output id="loginStatus" class="save-status"></output>
+      </form>
     </div>
   </body>
 </html>
