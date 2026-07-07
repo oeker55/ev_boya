@@ -9,7 +9,9 @@ const DEFAULT_IMAGE_SETTINGS = {
   src: "/ev.jpg",
   opacity: 0.4,
   masks: defaultMasks,
+  overlays: [],
 };
+const FLAG_SRC = "/bayrak.svg";
 const DEFAULT_PRIMARY_COLOR_INDEX = Math.max(
   0,
   COLORS.findIndex((color) => color.name === "Kum Beji")
@@ -29,6 +31,9 @@ const state = {
   secondaryColorIndex: DEFAULT_SECONDARY_COLOR_INDEX,
   activeColorSlot: "primary",
   masks: cloneMasks(defaultMasks),
+  overlays: [],
+  selectedOverlayId: "",
+  flagImage: null,
   images: [],
   currentImage: null,
   isAdminRoute:
@@ -91,6 +96,10 @@ const dom = {
   exportMaskButton: document.querySelector("#exportMaskButton"),
   targetPosition: document.querySelector("#targetPosition"),
   resetMaskButton: document.querySelector("#resetMaskButton"),
+  addFlagButton: document.querySelector("#addFlagButton"),
+  flagSmallerButton: document.querySelector("#flagSmallerButton"),
+  flagLargerButton: document.querySelector("#flagLargerButton"),
+  deleteFlagButton: document.querySelector("#deleteFlagButton"),
   searchInput: document.querySelector("#searchInput"),
   familySelect: document.querySelector("#familySelect"),
   swatchGrid: document.querySelector("#swatchGrid"),
@@ -118,6 +127,7 @@ async function init() {
   dom.sourceLink.href = PALETTE_SOURCE;
   wireControls();
   renderFamilyOptions();
+  loadFlagAsset();
   await loadInitialProject();
   renderAreaControls();
   renderAll();
@@ -152,6 +162,32 @@ function serializeMasks(masks = state.masks) {
     points: mask.points.map((point) => [...point]),
     holes: mask.holes.map((hole) => hole.map((point) => [...point])),
   }));
+}
+
+function cloneOverlays(overlays) {
+  return (Array.isArray(overlays) ? overlays : [])
+    .map((overlay, index) => normalizeOverlay(overlay, index))
+    .filter(Boolean);
+}
+
+function serializeOverlays(overlays = state.overlays) {
+  return cloneOverlays(overlays);
+}
+
+function normalizeOverlay(overlay, index = 0) {
+  if (!overlay || overlay.type !== "flag") return null;
+  const width = clamp(Number(overlay.width ?? 0.1), 0.03, 0.45);
+  const height = clamp(Number(overlay.height ?? width), 0.03, 0.45);
+  return {
+    id: String(overlay.id || `flag-${index + 1}`),
+    type: "flag",
+    src: FLAG_SRC,
+    enabled: overlay.enabled ?? true,
+    x: clamp(Number(overlay.x ?? 0.72), 0, 1 - width),
+    y: clamp(Number(overlay.y ?? 0.12), 0, 1 - height),
+    width,
+    height,
+  };
 }
 
 function normalizeColorSlot(slot) {
@@ -191,6 +227,7 @@ function queueImageSave() {
 
   state.currentImage.opacity = state.opacity;
   state.currentImage.masks = serializeMasks();
+  state.currentImage.overlays = serializeOverlays();
   window.clearTimeout(state.saveTimer);
   state.saveTimer = window.setTimeout(() => {
     persistCurrentImage();
@@ -214,6 +251,7 @@ async function persistCurrentImage() {
       body: JSON.stringify({
         opacity: state.opacity,
         masks: serializeMasks(),
+        overlays: serializeOverlays(),
       }),
     });
     state.currentImage = normalizeImageSettings(image);
@@ -404,6 +442,19 @@ function wireControls() {
     copyMaskExport();
   });
 
+  if (dom.addFlagButton) {
+    dom.addFlagButton.addEventListener("click", addFlagOverlay);
+  }
+  if (dom.flagSmallerButton) {
+    dom.flagSmallerButton.addEventListener("click", () => resizeSelectedFlag(0.86));
+  }
+  if (dom.flagLargerButton) {
+    dom.flagLargerButton.addEventListener("click", () => resizeSelectedFlag(1.14));
+  }
+  if (dom.deleteFlagButton) {
+    dom.deleteFlagButton.addEventListener("click", deleteSelectedFlag);
+  }
+
   dom.resetMaskButton.addEventListener("click", () => {
     if (!canEditProject()) return;
     state.masks = state.currentImage?.id === DEFAULT_IMAGE_ID ? cloneMasks(defaultMasks) : [];
@@ -534,7 +585,11 @@ function renderAreaControls() {
           });
           slotSelect.addEventListener("change", () => {
             mask.colorSlot = normalizeColorSlot(slotSelect.value);
+            if (mask.colorSlot === state.activeColorSlot) {
+              state.editAreaId = getEditValue(mask.id, "outer");
+            }
             saveMasks();
+            renderAreaControls();
             renderCanvas();
           });
           label.append(slotSelect);
@@ -546,14 +601,15 @@ function renderAreaControls() {
 
   dom.editAreaSelect.replaceChildren(
     ...state.masks.flatMap((mask) => {
+      const slotLabel = getColorSlotLabel(mask.colorSlot);
       const outer = document.createElement("option");
       outer.value = getEditValue(mask.id, "outer");
-      outer.textContent = `${mask.label} - Dış çizgi`;
+      outer.textContent = `${mask.label} - ${slotLabel} - Dis cizgi`;
 
       const holes = mask.holes.map((_, holeIndex) => {
         const option = document.createElement("option");
         option.value = getEditValue(mask.id, "hole", holeIndex);
-        option.textContent = `${mask.label} - Boyanmayacak ${holeIndex + 1}`;
+        option.textContent = `${mask.label} - ${slotLabel} - Boyanmayacak ${holeIndex + 1}`;
         return option;
       });
 
@@ -586,9 +642,29 @@ function renderColorSlotControls() {
 
 function setActiveColorSlot(slot) {
   state.activeColorSlot = normalizeColorSlot(slot);
+  selectFirstMaskForActiveSlot();
   renderColorSlotControls();
   renderCurrentColor();
   renderPaletteSelection();
+}
+
+function selectFirstMaskForActiveSlot() {
+  if (!canEditProject() || !state.masks.length) return;
+  const mask = state.masks.find(
+    (item) => normalizeColorSlot(item.colorSlot) === state.activeColorSlot
+  );
+  if (!mask) return;
+  state.editAreaId = getEditValue(mask.id, "outer");
+  if (dom.editAreaSelect) {
+    dom.editAreaSelect.value = state.editAreaId;
+  }
+  state.activePoint = null;
+  state.hoverPoint = null;
+  state.pointerPosition = null;
+  state.moveMode = false;
+  state.draft = null;
+  updateCanvasCursor();
+  renderCanvas();
 }
 
 function renderCurrentColor() {
@@ -821,6 +897,15 @@ function refreshIcons() {
   }
 }
 
+function loadFlagAsset() {
+  const image = new Image();
+  image.onload = () => {
+    state.flagImage = image;
+    renderCanvas();
+  };
+  image.src = FLAG_SRC;
+}
+
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -895,6 +980,8 @@ async function applyImageSettings(settings) {
   state.photoName = normalized.name;
   state.opacity = normalized.opacity;
   state.masks = cloneMasks(normalized.masks);
+  state.overlays = cloneOverlays(normalized.overlays);
+  state.selectedOverlayId = state.overlays[0]?.id || "";
   state.editAreaId = state.masks[0] ? getEditValue(state.masks[0].id, "outer") : "";
   state.activePoint = null;
   state.hoverPoint = null;
@@ -929,6 +1016,7 @@ function normalizeImageSettings(image) {
     src: String(image?.src || fallback.src),
     opacity: clamp(Number(image?.opacity ?? fallback.opacity), 0.2, 1),
     masks: cloneMasks(masks).filter((mask) => mask.points.length >= 3),
+    overlays: cloneOverlays(image?.overlays || fallback.overlays),
     createdAt: image?.createdAt || "",
     updatedAt: image?.updatedAt || "",
   };
@@ -1268,6 +1356,8 @@ function renderCanvas() {
     paintMasks();
   }
 
+  drawOverlays();
+
   if (state.showMask) {
     drawMaskGuides();
   }
@@ -1299,6 +1389,37 @@ function paintMasks() {
 
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
+}
+
+function drawOverlays() {
+  if (!state.flagImage || !state.overlays.length) return;
+
+  for (const overlay of state.overlays) {
+    if (!overlay.enabled || overlay.type !== "flag") continue;
+    const box = getOverlayBox(overlay);
+    ctx.save();
+    ctx.drawImage(state.flagImage, box.x, box.y, box.width, box.height);
+
+    if (canEditProject() && overlay.id === state.selectedOverlayId) {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(box.x, box.y, box.width, box.height);
+      ctx.strokeStyle = "#1c7972";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(box.x, box.y, box.width, box.height);
+    }
+
+    ctx.restore();
+  }
+}
+
+function getOverlayBox(overlay) {
+  return {
+    x: overlay.x * state.canvasWidth,
+    y: overlay.y * state.canvasHeight,
+    width: overlay.width * state.canvasWidth,
+    height: overlay.height * state.canvasHeight,
+  };
 }
 
 function drawMaskGuides() {
@@ -1505,9 +1626,27 @@ function addPolygon(path, points) {
 }
 
 function startMaskDrag(event) {
+  const position = getCanvasPosition(event);
+  if (canEditProject()) {
+    const overlay = findOverlayAt(position);
+    if (overlay) {
+      state.selectedOverlayId = overlay.id;
+      state.drag = {
+        mode: "overlay",
+        overlayId: overlay.id,
+        start: position,
+        original: { x: overlay.x, y: overlay.y },
+      };
+      dom.canvas.setPointerCapture(event.pointerId);
+      dom.canvas.classList.add("is-dragging");
+      syncEditTools();
+      renderCanvas();
+      return;
+    }
+  }
+
   if (!state.editMode || !canEditProject()) return;
 
-  const position = getCanvasPosition(event);
   state.pointerPosition = position;
   if (state.draft) {
     addDraftPoint(position);
@@ -1571,11 +1710,31 @@ function startMaskDrag(event) {
 }
 
 function moveMaskPoint(event) {
+  if (state.drag?.mode === "overlay") {
+    const position = getCanvasPosition(event);
+    const overlay = state.overlays.find((item) => item.id === state.drag.overlayId);
+    if (!overlay) return;
+    const dx = (position.x - state.drag.start.x) / state.canvasWidth;
+    const dy = (position.y - state.drag.start.y) / state.canvasHeight;
+    overlay.x = clamp(state.drag.original.x + dx, 0, 1 - overlay.width);
+    overlay.y = clamp(state.drag.original.y + dy, 0, 1 - overlay.height);
+    renderCanvas();
+    return;
+  }
+
   if (state.editMode) {
     state.pointerPosition = getCanvasPosition(event);
   }
 
   if (!state.drag) {
+    if (canEditProject() && findOverlayAt(getCanvasPosition(event))) {
+      updateCanvasCursor("move");
+      return;
+    }
+    if (!state.editMode) {
+      updateCanvasCursor("default");
+      return;
+    }
     updateHoverState(event);
     return;
   }
@@ -1605,12 +1764,17 @@ function moveMaskPoint(event) {
 
 function endMaskDrag(event) {
   if (!state.drag) return;
+  const wasOverlayDrag = state.drag.mode === "overlay";
   if (dom.canvas.hasPointerCapture(event.pointerId)) {
     dom.canvas.releasePointerCapture(event.pointerId);
   }
   state.drag = null;
   dom.canvas.classList.remove("is-dragging");
-  updateHoverState(event);
+  if (wasOverlayDrag) {
+    updateCanvasCursor(findOverlayAt(getCanvasPosition(event)) ? "move" : "default");
+  } else {
+    updateHoverState(event);
+  }
   saveMasks();
 }
 
@@ -1851,6 +2015,76 @@ function resetEditInteraction() {
   updateCanvasCursor();
 }
 
+function addFlagOverlay() {
+  if (!canEditProject()) return;
+  const width = 0.1;
+  const overlay = normalizeOverlay({
+    id: `flag-${Date.now()}`,
+    type: "flag",
+    x: 0.72,
+    y: 0.12,
+    width,
+    height: width,
+    enabled: true,
+  });
+  state.overlays.push(overlay);
+  state.selectedOverlayId = overlay.id;
+  saveMasks();
+  syncEditTools();
+  renderCanvas();
+}
+
+function resizeSelectedFlag(factor) {
+  if (!canEditProject()) return;
+  const overlay = getSelectedFlagOverlay();
+  if (!overlay) return;
+  const centerX = overlay.x + overlay.width / 2;
+  const centerY = overlay.y + overlay.height / 2;
+  overlay.width = clamp(overlay.width * factor, 0.03, 0.45);
+  overlay.height = clamp(overlay.height * factor, 0.03, 0.45);
+  overlay.x = clamp(centerX - overlay.width / 2, 0, 1 - overlay.width);
+  overlay.y = clamp(centerY - overlay.height / 2, 0, 1 - overlay.height);
+  saveMasks();
+  syncEditTools();
+  renderCanvas();
+}
+
+function deleteSelectedFlag() {
+  if (!canEditProject()) return;
+  const overlay = getSelectedFlagOverlay();
+  if (!overlay) return;
+  state.overlays = state.overlays.filter((item) => item.id !== overlay.id);
+  state.selectedOverlayId = state.overlays[0]?.id || "";
+  saveMasks();
+  syncEditTools();
+  renderCanvas();
+}
+
+function getSelectedFlagOverlay() {
+  return (
+    state.overlays.find((overlay) => overlay.id === state.selectedOverlayId) ||
+    state.overlays.find((overlay) => overlay.type === "flag") ||
+    null
+  );
+}
+
+function findOverlayAt(position) {
+  for (let index = state.overlays.length - 1; index >= 0; index -= 1) {
+    const overlay = state.overlays[index];
+    if (!overlay.enabled || overlay.type !== "flag") continue;
+    const box = getOverlayBox(overlay);
+    if (
+      position.x >= box.x &&
+      position.x <= box.x + box.width &&
+      position.y >= box.y &&
+      position.y <= box.y + box.height
+    ) {
+      return overlay;
+    }
+  }
+  return null;
+}
+
 function syncEditTools() {
   const disabled = !state.editMode || !canEditProject();
   const target = state.editMode ? getEditTarget() : null;
@@ -1874,6 +2108,13 @@ function syncEditTools() {
   dom.cancelDrawButton.disabled = !state.draft;
   dom.clearMaskButton.disabled = disabled || (!state.masks.length && !state.draft);
   dom.exportMaskButton.disabled = !state.masks.length;
+  if (dom.addFlagButton) dom.addFlagButton.disabled = !canEditProject();
+  if (dom.flagSmallerButton)
+    dom.flagSmallerButton.disabled = !canEditProject() || !getSelectedFlagOverlay();
+  if (dom.flagLargerButton)
+    dom.flagLargerButton.disabled = !canEditProject() || !getSelectedFlagOverlay();
+  if (dom.deleteFlagButton)
+    dom.deleteFlagButton.disabled = !canEditProject() || !getSelectedFlagOverlay();
 }
 
 async function copyMaskExport() {
@@ -1882,6 +2123,7 @@ async function copyMaskExport() {
       id: mask.id,
       label: mask.label,
       enabled: mask.enabled,
+      colorSlot: normalizeColorSlot(mask.colorSlot),
       points: mask.points,
       holes: mask.holes,
     })),

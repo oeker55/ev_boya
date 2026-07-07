@@ -105,7 +105,12 @@ export default function PaintPage() {
                 </p>
               </div>
             </div>
-            <div id="colorSlotTabs" className="color-slot-tabs" role="group" aria-label="Renk hedefi">
+            <div
+              id="colorSlotTabs"
+              className="color-slot-tabs"
+              role="group"
+              aria-label="Renk hedefi"
+            >
               <button
                 className="slot-button is-active"
                 type="button"
@@ -297,6 +302,44 @@ export default function PaintPage() {
                 title="Maskeyi kopyala"
               >
                 <i data-lucide="clipboard" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="edit-tools flag-tools admin-only" aria-label="Bayrak araÃ§larÄ±">
+              <button
+                className="icon-button"
+                id="addFlagButton"
+                type="button"
+                aria-label="Bayrak ekle"
+                title="Bayrak ekle"
+              >
+                <i data-lucide="flag" aria-hidden="true" />
+              </button>
+              <button
+                className="icon-button"
+                id="flagSmallerButton"
+                type="button"
+                aria-label="BayraÄŸÄ± kÃ¼Ã§Ã¼lt"
+                title="BayraÄŸÄ± kÃ¼Ã§Ã¼lt"
+              >
+                <i data-lucide="minus" aria-hidden="true" />
+              </button>
+              <button
+                className="icon-button"
+                id="flagLargerButton"
+                type="button"
+                aria-label="BayraÄŸÄ± bÃ¼yÃ¼t"
+                title="BayraÄŸÄ± bÃ¼yÃ¼t"
+              >
+                <i data-lucide="plus" aria-hidden="true" />
+              </button>
+              <button
+                className="icon-button"
+                id="deleteFlagButton"
+                type="button"
+                aria-label="BayraÄŸÄ± sil"
+                title="BayraÄŸÄ± sil"
+              >
+                <i data-lucide="trash-2" aria-hidden="true" />
               </button>
             </div>
             <output id="targetPosition" className="target-position">
