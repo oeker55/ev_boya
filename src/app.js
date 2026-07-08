@@ -482,14 +482,16 @@ function wireControls() {
     setColor(Number(button.dataset.colorIndex));
   });
 
-  // Open mobile color picker popup when tapping current swatch
+  // Open mobile color picker popup when tapping current swatch.
   if (dom.currentSwatch) {
-    dom.currentSwatch.addEventListener("click", (e) => {
-      // Only show modal on small screens (mobile)
-      if (!window.matchMedia || window.matchMedia("(max-width: 1040px)").matches) {
-        openColorPickerPopup();
-      }
+    dom.currentSwatch.addEventListener("pointerup", (event) => {
+      if (event.pointerType !== "touch") return;
+      openColorPickerPopupIfMobile(event);
     });
+    dom.currentSwatch.addEventListener("touchend", openColorPickerPopupIfMobile, {
+      passive: false,
+    });
+    dom.currentSwatch.addEventListener("click", openColorPickerPopupIfMobile);
   }
 
   dom.canvas.addEventListener("pointerdown", startMaskDrag);
@@ -766,6 +768,16 @@ function renderPaletteSelection() {
 let _colorPopup = null;
 let _colorPopupScrollY = 0;
 
+function shouldUseColorPopup() {
+  return !window.matchMedia || window.matchMedia("(max-width: 1040px)").matches;
+}
+
+function openColorPickerPopupIfMobile(event) {
+  if (!shouldUseColorPopup()) return;
+  event?.preventDefault();
+  openColorPickerPopup();
+}
+
 function syncColorPopupViewportHeight() {
   const viewportHeight =
     window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight;
@@ -775,7 +787,7 @@ function syncColorPopupViewportHeight() {
 function lockPageForColorPopup() {
   _colorPopupScrollY = window.scrollY || document.documentElement.scrollTop || 0;
   syncColorPopupViewportHeight();
-  document.body.style.top = `-${_colorPopupScrollY}px`;
+  document.documentElement.classList.add("has-modal");
   document.body.classList.add("has-modal");
   window.addEventListener("resize", syncColorPopupViewportHeight);
   window.visualViewport?.addEventListener("resize", syncColorPopupViewportHeight);
@@ -784,8 +796,8 @@ function lockPageForColorPopup() {
 function unlockPageForColorPopup() {
   window.removeEventListener("resize", syncColorPopupViewportHeight);
   window.visualViewport?.removeEventListener("resize", syncColorPopupViewportHeight);
+  document.documentElement.classList.remove("has-modal");
   document.body.classList.remove("has-modal");
-  document.body.style.top = "";
   document.documentElement.style.removeProperty("--color-popup-vh");
   window.scrollTo(0, _colorPopupScrollY);
 }

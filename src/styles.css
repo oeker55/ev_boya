@@ -59,6 +59,7 @@ input[type="range"] {
 }
 
 #paintCanvas,
+.current-swatch,
 .swatch,
 .button,
 .icon-button,
@@ -567,11 +568,15 @@ body:not(.is-admin) .admin-only {
 }
 
 .current-swatch {
+  appearance: none;
+  -webkit-appearance: none;
   width: 64px;
   height: 64px;
+  padding: 0;
   border-radius: 8px;
   border: 1px solid rgba(31, 36, 33, 0.18);
   box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.42);
+  cursor: pointer;
 }
 
 .current-color h2 {
@@ -1141,11 +1146,17 @@ select {
 }
 
 body.has-modal {
-  position: fixed;
-  left: 0;
-  right: 0;
   width: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html.has-modal {
+  overflow: hidden;
+}
+
+body.has-modal .mobile-download-footer {
+  display: none;
 }
 
 @media (max-width: 680px) {

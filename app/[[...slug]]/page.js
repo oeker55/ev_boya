@@ -96,7 +96,12 @@ export default function PaintPage() {
               </a>
             </div>
             <div className="current-color">
-              <span id="currentSwatch" className="current-swatch" />
+              <button
+                id="currentSwatch"
+                className="current-swatch"
+                type="button"
+                aria-label="Renk seç"
+              />
               <div>
                 <h2 id="currentName">Kum Beji</h2>
                 <p>

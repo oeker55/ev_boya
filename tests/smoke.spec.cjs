@@ -1,4 +1,4 @@
-const { test, expect } = require("@playwright/test");
+const { test, expect, devices } = require("@playwright/test");
 
 test("renders palette and painted canvas", async ({ page }) => {
   const pageErrors = [];
@@ -41,14 +41,15 @@ test("renders palette and painted canvas", async ({ page }) => {
   await page.screenshot({ path: "test-results/smoke.png", fullPage: true });
 });
 
-test("mobile color picker stays on top of the preview", async ({ page }) => {
+test("mobile color picker stays on top of the preview", async ({ browser }) => {
+  const context = await browser.newContext({ ...devices["iPhone 13"] });
+  const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/", { waitUntil: "networkidle" });
+  await page.goto("http://localhost:5174/", { waitUntil: "networkidle" });
 
-  await page.locator("#currentSwatch").click();
+  await page.locator("#currentSwatch").tap();
   await expect(page.locator(".color-popup-overlay")).toBeVisible();
   await page.waitForFunction(() => document.querySelectorAll(".color-popup-grid .swatch").length > 1000);
 
@@ -57,6 +58,7 @@ test("mobile color picker stays on top of the preview", async ({ page }) => {
     const popup = document.querySelector(".color-popup");
     const grid = document.querySelector(".color-popup-grid");
     const swatch = grid.querySelector(".swatch");
+    const footer = document.querySelector(".mobile-download-footer");
     const overlayBox = overlay.getBoundingClientRect();
     const popupBox = popup.getBoundingClientRect();
     const gridBox = grid.getBoundingClientRect();
@@ -74,12 +76,16 @@ test("mobile color picker stays on top of the preview", async ({ page }) => {
       gridHeight: gridBox.height,
       gridScrollHeight: grid.scrollHeight,
       overlayZ: Number(window.getComputedStyle(overlay).zIndex),
+      htmlHasModal: document.documentElement.classList.contains("has-modal"),
       bodyHasModal: document.body.classList.contains("has-modal"),
+      footerDisplay: window.getComputedStyle(footer).display,
       hitPopupSwatch: Boolean(hitTarget?.closest(".color-popup-grid .swatch")),
     };
   });
 
+  expect(layout.htmlHasModal).toBe(true);
   expect(layout.bodyHasModal).toBe(true);
+  expect(layout.footerDisplay).toBe("none");
   expect(layout.overlayZ).toBeGreaterThanOrEqual(1000);
   expect(layout.overlayTop).toBeLessThanOrEqual(1);
   expect(Math.abs(layout.overlayBottom - layout.viewportHeight)).toBeLessThanOrEqual(2);
@@ -89,6 +95,7 @@ test("mobile color picker stays on top of the preview", async ({ page }) => {
   expect(pageErrors).toEqual([]);
 
   await page.screenshot({ path: "test-results/mobile-color-popup.png", fullPage: true });
+  await context.close();
 });
 
 test("protects admin panel and opens the selected image after login", async ({ page }) => {
