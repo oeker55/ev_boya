@@ -95,7 +95,7 @@ export default function PaintPage() {
                 Kartela
               </a>
             </div>
-            <div className="current-color">
+            <div id="currentColor" className="current-color">
               <button
                 id="currentSwatch"
                 className="current-swatch"

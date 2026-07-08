@@ -49,7 +49,36 @@ test("mobile color picker stays on top of the preview", async ({ browser }) => {
 
   await page.goto("http://localhost:5174/", { waitUntil: "networkidle" });
 
-  await page.locator("#currentSwatch").tap();
+  const mobileLayout = await page.evaluate(() => {
+    const canvas = document.querySelector("#paintCanvas");
+    const preview = document.querySelector(".preview-panel");
+    const current = document.querySelector(".current-section");
+    const palette = document.querySelector(".palette-section");
+    const canvasBox = canvas.getBoundingClientRect();
+    const previewBox = preview.getBoundingClientRect();
+    const currentBox = current.getBoundingClientRect();
+    const hitTarget = document.elementFromPoint(
+      currentBox.left + currentBox.width / 2,
+      currentBox.top + Math.min(24, currentBox.height / 2)
+    );
+
+    return {
+      canvasBottom: canvasBox.bottom,
+      previewBottom: previewBox.bottom,
+      currentTop: currentBox.top,
+      currentVisible: currentBox.height > 0 && currentBox.bottom > 0,
+      currentHit: Boolean(hitTarget?.closest(".current-section")),
+      paletteDisplay: window.getComputedStyle(palette).display,
+    };
+  });
+
+  expect(mobileLayout.currentVisible).toBe(true);
+  expect(mobileLayout.currentHit).toBe(true);
+  expect(mobileLayout.currentTop).toBeGreaterThanOrEqual(mobileLayout.previewBottom - 1);
+  expect(mobileLayout.canvasBottom).toBeLessThanOrEqual(mobileLayout.previewBottom + 1);
+  expect(mobileLayout.paletteDisplay).toBe("none");
+
+  await page.locator("#currentColor").tap();
   await expect(page.locator(".color-popup-overlay")).toBeVisible();
   await page.waitForFunction(() => document.querySelectorAll(".color-popup-grid .swatch").length > 1000);
 

@@ -69,6 +69,7 @@ const dom = {
   downloadButtonMobile: document.querySelector("#downloadButtonMobile"),
   originalToggle: document.querySelector("#originalToggle"),
   maskToggle: document.querySelector("#maskToggle"),
+  currentColor: document.querySelector("#currentColor"),
   currentSwatch: document.querySelector("#currentSwatch"),
   currentName: document.querySelector("#currentName"),
   currentCode: document.querySelector("#currentCode"),
@@ -482,16 +483,16 @@ function wireControls() {
     setColor(Number(button.dataset.colorIndex));
   });
 
-  // Open mobile color picker popup when tapping current swatch.
-  if (dom.currentSwatch) {
-    dom.currentSwatch.addEventListener("pointerup", (event) => {
+  // Open mobile color picker popup when tapping the selected color row.
+  if (dom.currentColor) {
+    dom.currentColor.addEventListener("pointerup", (event) => {
       if (event.pointerType !== "touch") return;
       openColorPickerPopupIfMobile(event);
     });
-    dom.currentSwatch.addEventListener("touchend", openColorPickerPopupIfMobile, {
+    dom.currentColor.addEventListener("touchend", openColorPickerPopupIfMobile, {
       passive: false,
     });
-    dom.currentSwatch.addEventListener("click", openColorPickerPopupIfMobile);
+    dom.currentColor.addEventListener("click", openColorPickerPopupIfMobile);
   }
 
   dom.canvas.addEventListener("pointerdown", startMaskDrag);
