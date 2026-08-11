@@ -4,7 +4,8 @@ Next.js + MongoDB tabanlı ev boya renk simülatörü.
 
 - Public kullanıcılar `/resimId` adresinden ilgili resmi görür.
 - Admin paneli `/admin` adresindedir.
-- Login bilgileri MongoDB `users` koleksiyonundan doğrulanır.
+- Kullanıcılar e-posta ve şifreyle kayıt olup giriş yapar.
+- Şifre sıfırlama bağlantıları MongoDB'de süreli ve hash'lenmiş olarak saklanır.
 - Resim ayarları MongoDB `images` koleksiyonunda tutulur.
 - Upload edilen görseller MongoDB GridFS `uploads` bucket içinde saklanır.
 
@@ -33,14 +34,11 @@ Adresler:
 - `http://localhost:3000`
 - `http://localhost:3000/admin`
 
-## İlk Admin Kullanıcı
+## Hesap İşlemleri
 
-`users` koleksiyonu boşsa ilk login denemesinde aşağıdaki env değerleriyle admin kullanıcı otomatik oluşturulur:
-
-```txt
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=...
-```
+`/admin` ekranından e-posta ve şifreyle yeni hesap oluşturulabilir. Şifremi unuttum
+akışı, `C:\Users\Ozgur\Desktop\email` projesinin kullandığı mail servisindeki
+`/api/mail/send-test` uç noktasına bağlanır. Servis adresi `EMAIL_API_URL` ile değiştirilebilir.
 
 ## Eski JSON Verisini MongoDB'ye Aktarma
 
@@ -61,9 +59,9 @@ Gerekli Environment Variables:
 ```txt
 MONGODB_URI=...
 MONGODB_DB=painthouses
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=...
 SESSION_SECRET=...
+APP_URL=https://uygulama-adresi.example
+EMAIL_API_URL=http://80.225.238.243:3000/api
 MAX_UPLOAD_BYTES=10485760
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5.5

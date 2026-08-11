@@ -107,9 +107,20 @@ const dom = {
   resultCount: document.querySelector("#resultCount"),
   sourceLink: document.querySelector("#sourceLink"),
   adminOverlay: document.querySelector("#adminOverlay"),
+  authPanel: document.querySelector("#authPanel"),
+  authViews: document.querySelectorAll("[data-auth-view]"),
+  authViewButtons: document.querySelectorAll("[data-show-auth]"),
   loginForm: document.querySelector("#loginForm"),
-  loginUsername: document.querySelector("#loginUsername"),
+  loginEmail: document.querySelector("#loginEmail"),
   loginPassword: document.querySelector("#loginPassword"),
+  registerForm: document.querySelector("#registerForm"),
+  registerEmail: document.querySelector("#registerEmail"),
+  registerPassword: document.querySelector("#registerPassword"),
+  forgotPasswordForm: document.querySelector("#forgotPasswordForm"),
+  forgotEmail: document.querySelector("#forgotEmail"),
+  resetPasswordForm: document.querySelector("#resetPasswordForm"),
+  resetPassword: document.querySelector("#resetPassword"),
+  resetPasswordConfirm: document.querySelector("#resetPasswordConfirm"),
   loginStatus: document.querySelector("#loginStatus"),
   adminPanel: document.querySelector("#adminPanel"),
   uploadForm: document.querySelector("#uploadForm"),
@@ -127,6 +138,7 @@ let playTimer = null;
 async function init() {
   dom.sourceLink.href = PALETTE_SOURCE;
   wireControls();
+  showAuthView(new URLSearchParams(window.location.search).has("resetToken") ? "reset" : "login");
   renderFamilyOptions();
   loadFlagAsset();
   await loadInitialProject();
@@ -289,6 +301,25 @@ function wireControls() {
   }
   if (dom.loginForm) {
     dom.loginForm.addEventListener("submit", handleLogin);
+  }
+  if (dom.registerForm) {
+    dom.registerForm.addEventListener("submit", handleRegister);
+  }
+  if (dom.forgotPasswordForm) {
+    dom.forgotPasswordForm.addEventListener("submit", handleForgotPassword);
+  }
+  if (dom.resetPasswordForm) {
+    dom.resetPasswordForm.addEventListener("submit", handleResetPassword);
+  }
+  for (const button of dom.authViewButtons) {
+    button.addEventListener("click", () => {
+      if (button.dataset.showAuth === "login") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("resetToken");
+        window.history.replaceState({}, "", url);
+      }
+      showAuthView(button.dataset.showAuth);
+    });
   }
   if (dom.uploadForm) {
     dom.uploadForm.addEventListener("submit", handleUpload);
@@ -1108,21 +1139,103 @@ async function handleLogin(event) {
     const session = await apiRequest("/api/login", {
       method: "POST",
       body: JSON.stringify({
-        username: dom.loginUsername.value,
+        email: dom.loginEmail.value,
         password: dom.loginPassword.value,
       }),
     });
-    state.isAuthenticated = Boolean(session.authenticated);
     dom.loginPassword.value = "";
-    syncAdminUi();
-    setLoginStatus("Resimler yükleniyor");
-    await loadAdminImages();
-    await selectAdminImage(DEFAULT_IMAGE_ID);
-    syncAdminUi();
-    setLoginStatus("");
+    await completeAuthentication(session);
   } catch (error) {
     setLoginStatus(error.message || "Giriş yapılamadı", true);
   }
+}
+
+async function handleRegister(event) {
+  event.preventDefault();
+  setLoginStatus("Hesabınız oluşturuluyor");
+
+  try {
+    const session = await apiRequest("/api/register", {
+      method: "POST",
+      body: JSON.stringify({
+        email: dom.registerEmail.value,
+        password: dom.registerPassword.value,
+      }),
+    });
+    dom.registerPassword.value = "";
+    await completeAuthentication(session);
+  } catch (error) {
+    setLoginStatus(error.message || "Kayıt oluşturulamadı", true);
+  }
+}
+
+async function handleForgotPassword(event) {
+  event.preventDefault();
+  setLoginStatus("Sıfırlama bağlantısı gönderiliyor");
+
+  try {
+    const result = await apiRequest("/api/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify({ email: dom.forgotEmail.value }),
+    });
+    setLoginStatus(result.message);
+  } catch (error) {
+    setLoginStatus(error.message || "Sıfırlama e-postası gönderilemedi", true);
+  }
+}
+
+async function handleResetPassword(event) {
+  event.preventDefault();
+  if (dom.resetPassword.value !== dom.resetPasswordConfirm.value) {
+    setLoginStatus("Şifreler eşleşmiyor", true);
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get("resetToken");
+  if (!token) {
+    setLoginStatus("Sıfırlama bağlantısı geçersiz", true);
+    return;
+  }
+
+  setLoginStatus("Şifreniz güncelleniyor");
+  try {
+    const result = await apiRequest("/api/password-reset/confirm", {
+      method: "POST",
+      body: JSON.stringify({ token, password: dom.resetPassword.value }),
+    });
+    dom.resetPassword.value = "";
+    dom.resetPasswordConfirm.value = "";
+    url.searchParams.delete("resetToken");
+    window.history.replaceState({}, "", url);
+    showAuthView("login");
+    setLoginStatus(result.message);
+  } catch (error) {
+    setLoginStatus(error.message || "Şifre güncellenemedi", true);
+  }
+}
+
+async function completeAuthentication(session) {
+  state.isAuthenticated = Boolean(session.authenticated);
+  syncAdminUi();
+  setLoginStatus("Resimler yükleniyor");
+  await loadAdminImages();
+  await selectAdminImage(DEFAULT_IMAGE_ID);
+  syncAdminUi();
+  setLoginStatus("");
+}
+
+function showAuthView(view) {
+  const selectedView = ["login", "register", "forgot", "reset"].includes(view) ? view : "login";
+  for (const form of dom.authViews) {
+    form.hidden = form.dataset.authView !== selectedView;
+  }
+  setLoginStatus("");
+
+  const firstInput = dom.authPanel?.querySelector(
+    `[data-auth-view="${selectedView}"] input:not([type="hidden"])`
+  );
+  window.setTimeout(() => firstInput?.focus(), 0);
 }
 
 async function handleLogout() {

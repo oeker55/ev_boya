@@ -7,15 +7,15 @@ export const dynamic = "force-dynamic";
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const user = await authenticateUser(body.username, body.password);
+    const user = await authenticateUser(body.email, body.password);
 
     if (!user) {
-      return NextResponse.json({ error: "Giris bilgileri hatali" }, { status: 401 });
+      return NextResponse.json({ error: "E-posta veya şifre hatalı" }, { status: 401 });
     }
 
     const response = NextResponse.json({
       authenticated: true,
-      username: user.username,
+      email: user.email,
     });
     setSessionCookie(response, createSessionToken(user));
     return response;

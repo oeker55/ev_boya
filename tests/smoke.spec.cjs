@@ -80,7 +80,9 @@ test("mobile color picker stays on top of the preview", async ({ browser }) => {
 
   await page.locator("#currentColor").tap();
   await expect(page.locator(".color-popup-overlay")).toBeVisible();
-  await page.waitForFunction(() => document.querySelectorAll(".color-popup-grid .swatch").length > 1000);
+  await page.waitForFunction(
+    () => document.querySelectorAll(".color-popup-grid .swatch").length > 1000
+  );
 
   const layout = await page.evaluate(() => {
     const overlay = document.querySelector(".color-popup-overlay");
@@ -128,7 +130,10 @@ test("mobile color picker stays on top of the preview", async ({ browser }) => {
 });
 
 test("protects admin panel and opens the selected image after login", async ({ page }) => {
-  test.skip(!process.env.MONGODB_URI, "Admin API requires MONGODB_URI");
+  test.skip(
+    !process.env.MONGODB_URI || !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD,
+    "Admin API requires MongoDB and test user credentials"
+  );
 
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -138,8 +143,8 @@ test("protects admin panel and opens the selected image after login", async ({ p
   await expect(page.locator("#adminOverlay")).toBeVisible();
   await expect(page.locator("#adminPanel")).toBeHidden();
 
-  await page.locator("#loginUsername").fill("admin");
-  await page.locator("#loginPassword").fill("evrenk2026");
+  await page.locator("#loginEmail").fill(process.env.TEST_USER_EMAIL);
+  await page.locator("#loginPassword").fill(process.env.TEST_USER_PASSWORD);
   await page.locator("#loginForm").getByRole("button").click();
 
   await expect(page.locator("#adminOverlay")).toBeHidden();
@@ -152,4 +157,22 @@ test("protects admin panel and opens the selected image after login", async ({ p
   await expect(page).toHaveURL(/\/ev$/);
   await expect(page.locator("body")).not.toHaveClass(/is-admin/);
   expect(pageErrors).toEqual([]);
+});
+
+test("shows login, registration, forgot password and reset password screens", async ({ page }) => {
+  await page.goto("/admin", { waitUntil: "networkidle" });
+
+  await expect(page.locator("#loginForm")).toBeVisible();
+  await expect(page.locator("#loginEmail")).toHaveAttribute("type", "email");
+
+  await page.getByRole("button", { name: "Kayıt ol" }).click();
+  await expect(page.locator("#registerForm")).toBeVisible();
+  await expect(page.locator("#registerPassword")).toHaveAttribute("minlength", "8");
+
+  await page.getByRole("button", { name: "Zaten hesabım var" }).click();
+  await page.getByRole("button", { name: "Şifremi unuttum" }).click();
+  await expect(page.locator("#forgotPasswordForm")).toBeVisible();
+
+  await page.goto("/admin?resetToken=test-token", { waitUntil: "networkidle" });
+  await expect(page.locator("#resetPasswordForm")).toBeVisible();
 });

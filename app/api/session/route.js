@@ -8,6 +8,6 @@ export async function GET(request) {
   const session = getSessionFromRequest(request);
   return NextResponse.json({
     authenticated: Boolean(session),
-    username: session?.username || null,
+    email: session?.email || null,
   });
 }

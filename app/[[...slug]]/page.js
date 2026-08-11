@@ -380,25 +380,114 @@ export default function PaintPage() {
         </button>
       </div>
       <div className="admin-overlay" id="adminOverlay" hidden>
-        <form className="login-panel" id="loginForm">
+        <section className="login-panel" id="authPanel" aria-label="Hesap işlemleri">
           <div className="login-heading">
             <span className="brand-mark" aria-hidden="true" />
-            <strong>Yönetim</strong>
+            <div>
+              <strong>Yönetim</strong>
+              <small>Hesabınızla devam edin</small>
+            </div>
           </div>
-          <label>
-            <span>Kullanıcı adı</span>
-            <input id="loginUsername" type="text" autoComplete="username" defaultValue="admin" />
-          </label>
-          <label>
-            <span>Şifre</span>
-            <input id="loginPassword" type="password" autoComplete="current-password" />
-          </label>
-          <button className="button button-primary" type="submit">
-            <i data-lucide="log-in" aria-hidden="true" />
-            <span>Giriş yap</span>
-          </button>
-          <output id="loginStatus" className="save-status" />
-        </form>
+
+          <form className="auth-form" id="loginForm" data-auth-view="login">
+            <label>
+              <span>E-posta</span>
+              <input id="loginEmail" type="email" autoComplete="email" required />
+            </label>
+            <label>
+              <span>Şifre</span>
+              <input id="loginPassword" type="password" autoComplete="current-password" required />
+            </label>
+            <button className="button button-primary" type="submit">
+              <i data-lucide="log-in" aria-hidden="true" />
+              <span>Giriş yap</span>
+            </button>
+            <div className="auth-links">
+              <button className="link-button" type="button" data-show-auth="forgot">
+                Şifremi unuttum
+              </button>
+              <button className="link-button" type="button" data-show-auth="register">
+                Kayıt ol
+              </button>
+            </div>
+          </form>
+
+          <form className="auth-form" id="registerForm" data-auth-view="register" hidden>
+            <h2>Yeni hesap oluştur</h2>
+            <label>
+              <span>E-posta</span>
+              <input id="registerEmail" type="email" autoComplete="email" required />
+            </label>
+            <label>
+              <span>Şifre</span>
+              <input
+                id="registerPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength="8"
+                required
+              />
+              <small>En az 8 karakter</small>
+            </label>
+            <button className="button button-primary" type="submit">
+              <i data-lucide="user-plus" aria-hidden="true" />
+              <span>Kayıt ol</span>
+            </button>
+            <button className="link-button" type="button" data-show-auth="login">
+              Zaten hesabım var
+            </button>
+          </form>
+
+          <form className="auth-form" id="forgotPasswordForm" data-auth-view="forgot" hidden>
+            <h2>Şifrenizi sıfırlayın</h2>
+            <p>Kayıtlı e-posta adresinize bir saat geçerli bağlantı göndereceğiz.</p>
+            <label>
+              <span>E-posta</span>
+              <input id="forgotEmail" type="email" autoComplete="email" required />
+            </label>
+            <button className="button button-primary" type="submit">
+              <i data-lucide="mail" aria-hidden="true" />
+              <span>Bağlantı gönder</span>
+            </button>
+            <button className="link-button" type="button" data-show-auth="login">
+              Girişe dön
+            </button>
+          </form>
+
+          <form className="auth-form" id="resetPasswordForm" data-auth-view="reset" hidden>
+            <h2>Yeni şifre belirleyin</h2>
+            <label>
+              <span>Yeni şifre</span>
+              <input
+                id="resetPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength="8"
+                required
+              />
+              <small>En az 8 karakter</small>
+            </label>
+            <label>
+              <span>Yeni şifre (tekrar)</span>
+              <input
+                id="resetPasswordConfirm"
+                type="password"
+                autoComplete="new-password"
+                minLength="8"
+                required
+              />
+            </label>
+            <button className="button button-primary" type="submit">
+              <i data-lucide="key-round" aria-hidden="true" />
+              <span>Şifreyi güncelle</span>
+            </button>
+            <button className="link-button" type="button" data-show-auth="login">
+              Girişe dön
+            </button>
+          </form>
+
+          <output id="loginStatus" className="save-status auth-status" aria-live="polite" />
+        </section>
       </div>
       <PaintClient />
     </div>
