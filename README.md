@@ -10,6 +10,16 @@ alanlarını (maskeleri) çizer veya AI ile oluşturur.
   bucket'ında saklanır.
 - Şifre sıfırlama bağlantıları süreli ve hash'lenmiş olarak saklanır.
 
+## Özellikler
+
+- 2000'den fazla Bianca Stella rengi; ad, kod veya hex ile arama ve seri filtresi
+- Ana ve ikinci renk alanları, renkleri tek tek otomatik uygulama
+- Fotoğrafa basılı tutarak orijinal ile boyalı hâli karşılaştırma
+- Seçili renk bağlantıda saklanır (`?renk=90021&ikinci=94543`), böylece paylaşılan link aynı
+  görünümü açar
+- Mobilde yerel paylaşım menüsüyle (WhatsApp vb.) boyalı görseli gönderme, PNG indirme
+- Son seçilen renkler satırı, kurulabilir web uygulaması (manifest + ikonlar), Open Graph görseli
+
 ## Gereksinimler
 
 - Node.js 20.9 veya üzeri

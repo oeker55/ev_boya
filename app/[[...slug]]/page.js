@@ -1,5 +1,14 @@
 import PaintClient from "../paint-client";
 
+// Yönetim ekranı arama motorlarına kapalı; ziyaretçi sayfaları açık.
+export async function generateMetadata({ params }) {
+  const { slug = [] } = await params;
+  if (slug[0] === "admin") {
+    return { title: "Yönetim", robots: { index: false, follow: false } };
+  }
+  return {};
+}
+
 export default function PaintPage() {
   return (
     <div className="app">
@@ -20,6 +29,10 @@ export default function PaintPage() {
           <button className="button" id="publicLinkButton" type="button" hidden>
             <i data-lucide="external-link" aria-hidden="true" />
             <span>Public görünüm</span>
+          </button>
+          <button className="button" id="shareButton" type="button" hidden>
+            <i data-lucide="share-2" aria-hidden="true" />
+            <span>Paylaş</span>
           </button>
           <button className="button" id="downloadButton" type="button">
             <i data-lucide="download" aria-hidden="true" />
@@ -50,8 +63,15 @@ export default function PaintPage() {
             </div>
           </div>
 
-          <div className="stage-wrap">
+          <div className="stage-wrap" id="stageWrap">
             <canvas id="paintCanvas" aria-label="Boyanmış ev görüntüsü" />
+            <div className="stage-loader" id="stageLoader" aria-hidden="true">
+              <span className="spinner" />
+            </div>
+            <div className="stage-hint" id="stageHint" aria-hidden="true">
+              <i data-lucide="hand" aria-hidden="true" />
+              <span>Orijinali görmek için basılı tutun</span>
+            </div>
           </div>
         </section>
 
@@ -113,6 +133,10 @@ export default function PaintPage() {
                   <span id="currentHex">#000000</span>
                 </p>
               </div>
+            </div>
+            <div id="recentColors" className="recent-colors" hidden>
+              <span className="recent-label">Son seçilenler</span>
+              <div id="recentColorList" className="recent-list" role="list" />
             </div>
             <div
               id="colorSlotTabs"
@@ -377,12 +401,21 @@ export default function PaintPage() {
           </section>
         </aside>
       </main>
-      <div className="mobile-download-footer">
-        <button className="button button-primary" id="downloadButtonMobile" type="button">
+      <div className="mobile-download-footer" id="mobileBar">
+        <button className="button button-primary" id="pickColorButton" type="button">
+          <i data-lucide="palette" aria-hidden="true" />
+          <span>Renk seç</span>
+        </button>
+        <button className="button" id="shareButtonMobile" type="button" aria-label="Paylaş" hidden>
+          <i data-lucide="share-2" aria-hidden="true" />
+          <span>Paylaş</span>
+        </button>
+        <button className="button" id="downloadButtonMobile" type="button" aria-label="PNG indir">
           <i data-lucide="download" aria-hidden="true" />
-          <span>PNG indir</span>
+          <span>İndir</span>
         </button>
       </div>
+      <output id="toast" className="toast" aria-live="polite" />
       <div className="admin-overlay" id="adminOverlay" hidden>
         <section className="login-panel" id="authPanel" aria-label="Hesap işlemleri">
           <div className="login-heading">

@@ -10,6 +10,7 @@ import {
   Eraser,
   ExternalLink,
   Flag,
+  Hand,
   KeyRound,
   LockKeyhole,
   LogIn,
@@ -18,6 +19,7 @@ import {
   Minus,
   Move,
   Paintbrush,
+  Palette,
   Pause,
   Pencil,
   Play,
@@ -25,6 +27,7 @@ import {
   RotateCcw,
   Scissors,
   Search,
+  Share2,
   Sparkles,
   Square,
   SquarePlus,
@@ -48,6 +51,10 @@ const DEFAULT_IMAGE_SETTINGS = {
   overlays: [],
 };
 const FLAG_SRC = "/bayrak.svg";
+const RECENT_COLORS_KEY = "ayvatullu-recent-colors";
+const COMPARE_HINT_KEY = "ayvatullu-compare-hint-seen";
+const MAX_RECENT_COLORS = 8;
+const COMPARE_HOLD_DELAY = 160;
 const ICONS = {
   Check,
   ChevronLeft,
@@ -59,6 +66,7 @@ const ICONS = {
   Eraser,
   ExternalLink,
   Flag,
+  Hand,
   KeyRound,
   LockKeyhole,
   LogIn,
@@ -67,6 +75,7 @@ const ICONS = {
   Minus,
   Move,
   Paintbrush,
+  Palette,
   Pause,
   Pencil,
   Play,
@@ -74,6 +83,7 @@ const ICONS = {
   RotateCcw,
   Scissors,
   Search,
+  Share2,
   Sparkles,
   Square,
   SquarePlus,
@@ -116,6 +126,8 @@ const state = {
   filterText: "",
   family: "Tümü",
   showOriginal: false,
+  compareHold: false,
+  recentColors: [],
   showMask: false,
   editMode: false,
   editAreaId: "main|outer",
@@ -138,6 +150,14 @@ const dom = {
   publicLinkButton: document.querySelector("#publicLinkButton"),
   downloadButton: document.querySelector("#downloadButton"),
   downloadButtonMobile: document.querySelector("#downloadButtonMobile"),
+  shareButton: document.querySelector("#shareButton"),
+  shareButtonMobile: document.querySelector("#shareButtonMobile"),
+  pickColorButton: document.querySelector("#pickColorButton"),
+  previewPanel: document.querySelector(".preview-panel"),
+  stageHint: document.querySelector("#stageHint"),
+  recentColors: document.querySelector("#recentColors"),
+  recentColorList: document.querySelector("#recentColorList"),
+  toast: document.querySelector("#toast"),
   originalToggle: document.querySelector("#originalToggle"),
   maskToggle: document.querySelector("#maskToggle"),
   currentColor: document.querySelector("#currentColor"),
@@ -208,7 +228,10 @@ let playTimer = null;
 
 async function init() {
   dom.sourceLink.href = PALETTE_SOURCE;
+  applyColorsFromUrl();
+  loadRecentColors();
   wireControls();
+  syncShareButtons();
   refreshIcons();
   showAuthView(new URLSearchParams(window.location.search).has("resetToken") ? "reset" : "login");
   renderFamilyOptions();
@@ -227,6 +250,7 @@ async function init() {
   renderAreaControls();
   renderAll();
   syncAdminUi();
+  maybeShowCompareHint();
 }
 
 function cloneMasks(masks) {
@@ -395,6 +419,20 @@ function wireControls() {
   if (dom.downloadButtonMobile) {
     dom.downloadButtonMobile.addEventListener("click", downloadCanvas);
   }
+  for (const button of [dom.shareButton, dom.shareButtonMobile]) {
+    button?.addEventListener("click", shareCanvas);
+  }
+  if (dom.pickColorButton) {
+    dom.pickColorButton.addEventListener("click", () => openColorPickerPopup());
+  }
+  if (dom.recentColorList) {
+    dom.recentColorList.addEventListener("click", (event) => {
+      const chip = event.target.closest("[data-color-index]");
+      if (!chip) return;
+      setColor(Number(chip.dataset.colorIndex));
+    });
+  }
+  wireCompareHold();
   if (dom.publicLinkButton) {
     dom.publicLinkButton.addEventListener("click", () => {
       if (!state.currentImage) return;
@@ -844,6 +882,7 @@ function renderCurrentColor() {
   dom.currentName.textContent = color.name;
   dom.currentCode.textContent = `${getColorSlotLabel(state.activeColorSlot)} - Kod ${color.code}`;
   dom.currentHex.textContent = color.hex.toUpperCase();
+  renderRecentColors();
 }
 
 function getFilteredColors(filterText) {
@@ -922,9 +961,234 @@ function renderPalette(
 function setColor(index) {
   if (!Number.isInteger(index) || !COLORS[index]) return;
   setActiveColorIndex(index);
+  rememberRecentColor(index);
+  syncColorUrl();
   renderCurrentColor();
   renderPaletteSelection();
   renderCanvas();
+}
+
+/* ---------- Son seçilen renkler ---------- */
+
+function loadRecentColors() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(RECENT_COLORS_KEY) || "[]");
+    if (Array.isArray(stored)) {
+      state.recentColors = stored
+        .map((code) => COLORS.findIndex((color) => color.code === String(code)))
+        .filter((index) => index >= 0)
+        .slice(0, MAX_RECENT_COLORS);
+    }
+  } catch {
+    state.recentColors = [];
+  }
+}
+
+function rememberRecentColor(index) {
+  state.recentColors = [index, ...state.recentColors.filter((item) => item !== index)].slice(
+    0,
+    MAX_RECENT_COLORS
+  );
+  try {
+    window.localStorage.setItem(
+      RECENT_COLORS_KEY,
+      JSON.stringify(state.recentColors.map((item) => COLORS[item].code))
+    );
+  } catch {
+    // Özel sekme veya dolu depolama: son renkler yalnızca bu oturumda hatırlanır.
+  }
+}
+
+function renderRecentColors() {
+  if (!dom.recentColors || !dom.recentColorList) return;
+  const items = state.recentColors.filter((index) => COLORS[index]);
+  dom.recentColors.hidden = items.length < 2;
+  if (dom.recentColors.hidden) return;
+
+  const activeIndex = getActiveColorIndex();
+  dom.recentColorList.replaceChildren(
+    ...items.map((index) => {
+      const color = COLORS[index];
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "recent-chip";
+      chip.dataset.colorIndex = String(index);
+      chip.style.backgroundColor = color.hex;
+      chip.title = `${color.name} · ${color.code}`;
+      chip.setAttribute("aria-label", `${color.name}, ${color.code}`);
+      chip.setAttribute("role", "listitem");
+      if (index === activeIndex) chip.classList.add("is-selected");
+      return chip;
+    })
+  );
+}
+
+/* ---------- Renk bilgisi taşıyan bağlantılar ---------- */
+
+function findColorIndexByCode(code) {
+  if (!code) return -1;
+  const normalized = String(code).trim().replace("#", "").toLocaleLowerCase("tr");
+  return COLORS.findIndex(
+    (color) =>
+      color.code === normalized || color.hex.replace("#", "").toLocaleLowerCase("tr") === normalized
+  );
+}
+
+function applyColorsFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const primary = findColorIndexByCode(params.get("renk"));
+  const secondary = findColorIndexByCode(params.get("ikinci"));
+  if (primary >= 0) state.selectedColorIndex = primary;
+  if (secondary >= 0) state.secondaryColorIndex = secondary;
+}
+
+function syncColorUrl() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set("renk", COLORS[state.selectedColorIndex].code);
+    if (state.secondaryColorIndex !== DEFAULT_SECONDARY_COLOR_INDEX) {
+      url.searchParams.set("ikinci", COLORS[state.secondaryColorIndex].code);
+    } else {
+      url.searchParams.delete("ikinci");
+    }
+    window.history.replaceState(window.history.state, "", url);
+  } catch {
+    // URL güncellenemezse seçim yine de uygulanır.
+  }
+}
+
+function getShareUrl() {
+  const url = new URL(window.location.href);
+  if (canEditProject() && state.currentImage) {
+    // Yöneticinin paylaştığı bağlantı ziyaretçi görünümüne gitmeli.
+    const publicUrl = new URL(getPublicPath(state.currentImage.id), window.location.origin);
+    publicUrl.search = url.search;
+    publicUrl.searchParams.delete("image");
+    return publicUrl.toString();
+  }
+  url.searchParams.delete("resetToken");
+  return url.toString();
+}
+
+/* ---------- Paylaşım ---------- */
+
+function syncShareButtons() {
+  if (dom.shareButton) {
+    dom.shareButton.hidden = !(navigator.share || navigator.clipboard);
+  }
+  if (dom.shareButtonMobile) {
+    dom.shareButtonMobile.hidden = typeof navigator.share !== "function";
+  }
+}
+
+function canvasToBlob(type, quality) {
+  return new Promise((resolve) => dom.canvas.toBlob(resolve, type, quality));
+}
+
+async function shareCanvas() {
+  const color = COLORS[getActiveColorIndex()];
+  const url = getShareUrl();
+  const title = "Ayvatullu Ev Boya";
+  const text = `${color.name} (Kod ${color.code}) ile boyanmış ev önizlemesi`;
+
+  try {
+    if (typeof navigator.share === "function") {
+      const blob = await canvasToBlob("image/jpeg", 0.9);
+      const file =
+        blob && typeof File === "function"
+          ? new File([blob], `${getDownloadBaseName()}.jpg`, { type: "image/jpeg" })
+          : null;
+      if (file && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title, text });
+        return;
+      }
+      await navigator.share({ title, text, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    showToast("Bağlantı kopyalandı; seçili renk bağlantıda saklı");
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    showToast("Paylaşılamadı, görseli indirip gönderebilirsiniz", true);
+  }
+}
+
+/* ---------- Basılı tutarak orijinali karşılaştırma ---------- */
+
+let compareTimer = null;
+
+function wireCompareHold() {
+  const begin = (event) => {
+    if (state.editMode || state.drag || event.button > 0) return;
+    window.clearTimeout(compareTimer);
+    compareTimer = window.setTimeout(() => {
+      compareTimer = null;
+      state.compareHold = true;
+      dom.previewPanel?.classList.add("is-comparing");
+      setHintText("Orijinal görünüm");
+      markCompareHintSeen();
+      renderCanvas();
+    }, COMPARE_HOLD_DELAY);
+  };
+  const end = () => {
+    window.clearTimeout(compareTimer);
+    compareTimer = null;
+    if (!state.compareHold) return;
+    state.compareHold = false;
+    dom.previewPanel?.classList.remove("is-comparing");
+    setHintText("Orijinali görmek için basılı tutun");
+    renderCanvas();
+  };
+
+  dom.canvas.addEventListener("pointerdown", begin);
+  dom.canvas.addEventListener("pointerup", end);
+  dom.canvas.addEventListener("pointercancel", end);
+  dom.canvas.addEventListener("pointerleave", end);
+  window.addEventListener("blur", end);
+  // Dokunmatik cihazlarda uzun basış bağlam menüsü açmasın.
+  dom.canvas.addEventListener("contextmenu", (event) => {
+    if (!state.editMode) event.preventDefault();
+  });
+}
+
+function setHintText(text) {
+  const span = dom.stageHint?.querySelector("span");
+  if (span) span.textContent = text;
+}
+
+function maybeShowCompareHint() {
+  if (!dom.previewPanel || canEditProject()) return;
+  let seen = false;
+  try {
+    seen = window.localStorage.getItem(COMPARE_HINT_KEY) === "1";
+  } catch {
+    seen = false;
+  }
+  if (seen) return;
+  dom.previewPanel.classList.add("show-hint");
+  window.setTimeout(() => dom.previewPanel?.classList.remove("show-hint"), 4500);
+}
+
+function markCompareHintSeen() {
+  dom.previewPanel?.classList.remove("show-hint");
+  try {
+    window.localStorage.setItem(COMPARE_HINT_KEY, "1");
+  } catch {
+    // Depolama yoksa ipucu bir sonraki ziyarette yine görünür.
+  }
+}
+
+/* ---------- Bildirim balonu ---------- */
+
+let toastTimer = null;
+
+function showToast(message, isError = false) {
+  if (!dom.toast) return;
+  window.clearTimeout(toastTimer);
+  dom.toast.textContent = message;
+  dom.toast.classList.toggle("is-error", isError);
+  dom.toast.classList.add("is-visible");
+  toastTimer = window.setTimeout(() => dom.toast.classList.remove("is-visible"), 2800);
 }
 
 function renderPaletteSelection() {
@@ -997,7 +1261,7 @@ function openColorPickerPopup() {
   header.className = "color-popup-header";
   const title = document.createElement("div");
   title.className = "color-popup-title";
-  title.textContent = "Renk seçin";
+  title.textContent = `${getColorSlotLabel(state.activeColorSlot)} seçin`;
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "icon-button";
@@ -1014,13 +1278,29 @@ function openColorPickerPopup() {
   search.autocomplete = "off";
   search.setAttribute("aria-label", "Renk ara");
 
+  const family = document.createElement("select");
+  family.setAttribute("aria-label", "Renk serisi");
+  family.replaceChildren(
+    ...["Tümü", ...FAMILIES].map((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      return option;
+    })
+  );
+  family.value = state.family;
+
+  const filters = document.createElement("div");
+  filters.className = "color-popup-filters";
+  filters.append(search, family);
+
   const count = document.createElement("div");
   count.className = "color-popup-count";
 
   const grid = document.createElement("div");
   grid.className = "swatch-grid color-popup-grid";
 
-  panel.append(header, search, count, grid);
+  panel.append(header, filters, count, grid);
   overlay.append(panel);
   document.body.append(overlay);
 
@@ -1029,6 +1309,12 @@ function openColorPickerPopup() {
   }
 
   search.addEventListener("input", onSearch);
+  family.addEventListener("change", () => {
+    state.family = family.value;
+    if (dom.familySelect) dom.familySelect.value = state.family;
+    renderPalette();
+    onSearch();
+  });
 
   grid.addEventListener("click", (ev) => {
     const btn = ev.target.closest(".swatch");
@@ -1228,12 +1514,15 @@ async function applyImageSettings(settings) {
   if (dom.editMaskToggle) dom.editMaskToggle.checked = false;
   if (dom.maskToggle) dom.maskToggle.checked = false;
 
+  dom.previewPanel?.classList.add("is-loading");
   try {
     const cacheKey = normalized.updatedAt ? encodeURIComponent(normalized.updatedAt) : Date.now();
     state.image = await loadImage(`${normalized.src}?v=${cacheKey}`);
   } catch {
     state.photoName = `${normalized.name} bulunamadı`;
     state.image = await createGuideImage();
+  } finally {
+    dom.previewPanel?.classList.remove("is-loading");
   }
 
   renderAreaControls();
@@ -1595,6 +1884,7 @@ async function copyPublicLink() {
   try {
     await navigator.clipboard.writeText(link);
     setSaveStatus("Link kopyalandı");
+    showToast("Bağlantı kopyalandı");
   } catch {
     window.prompt("Public link", link);
   }
@@ -1718,7 +2008,7 @@ function renderCanvas() {
   ctx.clearRect(0, 0, state.canvasWidth, state.canvasHeight);
   ctx.drawImage(state.image, 0, 0, state.canvasWidth, state.canvasHeight);
 
-  if (!state.showOriginal) {
+  if (!state.showOriginal && !state.compareHold) {
     paintMasks();
   }
 
@@ -2467,6 +2757,7 @@ function findOverlayAt(position) {
 }
 
 function syncEditTools() {
+  dom.canvas.classList.toggle("can-compare", !state.editMode);
   const disabled = !state.editMode || !canEditProject();
   const target = state.editMode ? getEditTarget() : null;
   const targetText = getTargetPositionText();
@@ -2806,13 +3097,18 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function downloadCanvas() {
+function getDownloadBaseName() {
   const color = COLORS[getActiveColorIndex()];
   const imageName = state.currentImage?.name ? slugify(state.currentImage.name) : "ev";
+  return `${imageName}-renk-${slugify(color.name)}-${color.code}`;
+}
+
+function downloadCanvas() {
   const anchor = document.createElement("a");
-  anchor.download = `${imageName}-renk-${slugify(color.name)}-${color.code}.png`;
+  anchor.download = `${getDownloadBaseName()}.png`;
   anchor.href = dom.canvas.toDataURL("image/png");
   anchor.click();
+  showToast("Görsel indiriliyor");
 }
 
 function slugify(value) {
