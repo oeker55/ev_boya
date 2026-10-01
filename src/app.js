@@ -709,6 +709,12 @@ function renderFamilyOptions() {
 }
 
 function renderAreaControls() {
+  // Ziyaretçi için tek alanlık açma/kapama "Orijinal" anahtarıyla aynı işi görür; yer kaplamasın.
+  const areaSection = document.querySelector("#areaSection");
+  if (areaSection) {
+    areaSection.hidden = !canEditProject() && state.masks.length <= 1;
+  }
+
   if (!state.masks.length) {
     const empty = document.createElement("div");
     empty.className = "empty-result";
@@ -881,6 +887,7 @@ function renderPalette(
     button.className = "swatch";
     button.dataset.colorIndex = String(index);
     button.setAttribute("aria-label", `${color.name}, ${color.code}, ${color.hex}`);
+    button.title = color.name;
     if (index === getActiveColorIndex()) {
       button.classList.add("is-selected");
     }
@@ -898,9 +905,13 @@ function renderPalette(
 
     const code = document.createElement("span");
     code.className = "swatch-code";
-    code.textContent = `${color.code} · ${color.hex.toUpperCase()}`;
+    code.textContent = color.code;
 
-    text.append(name, code);
+    const hex = document.createElement("span");
+    hex.className = "swatch-hex";
+    hex.textContent = color.hex.toUpperCase();
+
+    text.append(name, code, hex);
     button.append(chip, text);
     fragment.append(button);
   }

@@ -174,7 +174,7 @@ export default function PaintPage() {
             </label>
           </section>
 
-          <section className="control-section">
+          <section className="control-section" id="areaSection">
             <div className="section-heading">
               <span>Cephe alanları</span>
               <button className="link-button" id="resetMaskButton" type="button">
