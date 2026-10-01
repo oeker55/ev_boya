@@ -1,3 +1,39 @@
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clipboard,
+  CloudUpload,
+  Copy,
+  createIcons,
+  Download,
+  Eraser,
+  ExternalLink,
+  Flag,
+  KeyRound,
+  LockKeyhole,
+  LogIn,
+  LogOut,
+  Mail,
+  Minus,
+  Move,
+  Paintbrush,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  RotateCcw,
+  Scissors,
+  Search,
+  Sparkles,
+  Square,
+  SquarePlus,
+  SquareX,
+  Trash2,
+  Upload,
+  UserPlus,
+  X,
+} from "lucide";
 import { COLORS, FAMILIES, PALETTE_SOURCE } from "./bianca-colors.js";
 import { defaultMasks } from "./defaultMasks.js";
 
@@ -12,6 +48,41 @@ const DEFAULT_IMAGE_SETTINGS = {
   overlays: [],
 };
 const FLAG_SRC = "/bayrak.svg";
+const ICONS = {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clipboard,
+  CloudUpload,
+  Copy,
+  Download,
+  Eraser,
+  ExternalLink,
+  Flag,
+  KeyRound,
+  LockKeyhole,
+  LogIn,
+  LogOut,
+  Mail,
+  Minus,
+  Move,
+  Paintbrush,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  RotateCcw,
+  Scissors,
+  Search,
+  Sparkles,
+  Square,
+  SquarePlus,
+  SquareX,
+  Trash2,
+  Upload,
+  UserPlus,
+  X,
+};
 const DEFAULT_PRIMARY_COLOR_INDEX = Math.max(
   0,
   COLORS.findIndex((color) => color.name === "Kum Beji")
@@ -138,17 +209,24 @@ let playTimer = null;
 async function init() {
   dom.sourceLink.href = PALETTE_SOURCE;
   wireControls();
+  refreshIcons();
   showAuthView(new URLSearchParams(window.location.search).has("resetToken") ? "reset" : "login");
   renderFamilyOptions();
   loadFlagAsset();
-  await loadInitialProject();
+
+  try {
+    await loadInitialProject();
+  } catch (error) {
+    console.error("Proje yüklenemedi", error);
+    setSaveStatus(error.message || "Resim yüklenemedi", true);
+    if (!state.image) {
+      await applyImageSettings(normalizeImageSettings(DEFAULT_IMAGE_SETTINGS));
+    }
+  }
+
   renderAreaControls();
   renderAll();
   syncAdminUi();
-
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
 }
 
 function cloneMasks(masks) {
@@ -228,7 +306,7 @@ function getMaskColorIndex(mask) {
 }
 
 function getColorSlotLabel(slot) {
-  return normalizeColorSlot(slot) === "secondary" ? "Ikinci renk" : "Ana renk";
+  return normalizeColorSlot(slot) === "secondary" ? "İkinci renk" : "Ana renk";
 }
 
 function canEditProject() {
@@ -243,6 +321,7 @@ function queueImageSave() {
   state.currentImage.overlays = serializeOverlays();
   window.clearTimeout(state.saveTimer);
   state.saveTimer = window.setTimeout(() => {
+    state.saveTimer = null;
     persistCurrentImage();
   }, 450);
   setSaveStatus("Kaydedilecek");
@@ -272,6 +351,10 @@ async function persistCurrentImage() {
     renderAdminImageList();
     setSaveStatus("Kaydedildi");
   } catch (error) {
+    if (error.status === 401) {
+      handleSessionExpired();
+      return;
+    }
     setSaveStatus(error.message || "Kaydedilemedi", true);
   } finally {
     state.isSaving = false;
@@ -280,6 +363,25 @@ async function persistCurrentImage() {
       queueImageSave();
     }
   }
+}
+
+function hasPendingChanges() {
+  return Boolean(state.saveTimer) || state.isSaving || state.saveAgain;
+}
+
+function handleSessionExpired() {
+  window.clearTimeout(state.saveTimer);
+  state.saveTimer = null;
+  state.saveAgain = false;
+  state.isAuthenticated = false;
+  syncAdminUi();
+  renderAreaControls();
+  renderCanvas();
+  showAuthView("login");
+  setLoginStatus(
+    "Oturumunuzun süresi doldu. Değişiklikleri kaydetmek için tekrar giriş yapın.",
+    true
+  );
 }
 
 function setSaveStatus(message, isError = false) {
@@ -324,6 +426,9 @@ function wireControls() {
   if (dom.uploadForm) {
     dom.uploadForm.addEventListener("submit", handleUpload);
   }
+  if (dom.uploadInput) {
+    dom.uploadInput.addEventListener("change", syncUploadLabel);
+  }
   if (dom.aiMaskButton) {
     dom.aiMaskButton.addEventListener("click", generateAiMask);
   }
@@ -331,7 +436,9 @@ function wireControls() {
     dom.imageList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-image-id]");
       if (!button) return;
-      selectAdminImage(button.dataset.imageId);
+      selectAdminImage(button.dataset.imageId).catch((error) => {
+        setSaveStatus(error.message || "Resim açılamadı", true);
+      });
     });
   }
   if (dom.copyPublicLinkButton) {
@@ -457,6 +564,9 @@ function wireControls() {
 
   dom.clearMaskButton.addEventListener("click", () => {
     if (!canEditProject()) return;
+    if (state.masks.length && !window.confirm("Bu resimdeki tüm boya alanları silinsin mi?")) {
+      return;
+    }
     state.masks = [];
     state.editAreaId = "";
     state.activePoint = null;
@@ -489,6 +599,7 @@ function wireControls() {
 
   dom.resetMaskButton.addEventListener("click", () => {
     if (!canEditProject()) return;
+    if (!window.confirm("Boya alanları başlangıç durumuna döndürülsün mü?")) return;
     state.masks = state.currentImage?.id === DEFAULT_IMAGE_ID ? cloneMasks(defaultMasks) : [];
     state.activePoint = null;
     state.moveMode = false;
@@ -532,8 +643,25 @@ function wireControls() {
   dom.canvas.addEventListener("pointercancel", endMaskDrag);
   dom.canvas.addEventListener("pointerleave", leaveCanvas);
 
+  window.addEventListener("beforeunload", (event) => {
+    if (!hasPendingChanges()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+
   window.addEventListener("keydown", (event) => {
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
+    if (
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      _colorPopup ||
+      (dom.adminOverlay && !dom.adminOverlay.hidden) ||
+      event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLSelectElement ||
+      event.target instanceof HTMLTextAreaElement ||
+      event.target?.isContentEditable
+    ) {
       return;
     }
 
@@ -611,7 +739,7 @@ function renderAreaControls() {
           slotSelect.setAttribute("aria-label", `${mask.label} renk hedefi`);
           slotSelect.innerHTML = `
             <option value="primary">Ana renk</option>
-            <option value="secondary">Ikinci renk</option>
+            <option value="secondary">İkinci renk</option>
           `;
           slotSelect.value = normalizeColorSlot(mask.colorSlot);
           slotSelect.addEventListener("click", (event) => {
@@ -638,7 +766,7 @@ function renderAreaControls() {
       const slotLabel = getColorSlotLabel(mask.colorSlot);
       const outer = document.createElement("option");
       outer.value = getEditValue(mask.id, "outer");
-      outer.textContent = `${mask.label} - ${slotLabel} - Dis cizgi`;
+      outer.textContent = `${mask.label} - ${slotLabel} - Dış çizgi`;
 
       const holes = mask.holes.map((_, holeIndex) => {
         const option = document.createElement("option");
@@ -659,7 +787,10 @@ function renderAreaControls() {
     dom.editAreaSelect.value = "";
     return;
   }
-  if (!dom.editAreaSelect.querySelector(`option[value="${state.editAreaId}"]`)) {
+  const hasEditOption = [...dom.editAreaSelect.options].some(
+    (option) => option.value === state.editAreaId
+  );
+  if (!hasEditOption) {
     state.editAreaId = dom.editAreaSelect.options[0]?.value || "main|outer";
   }
   dom.editAreaSelect.value = state.editAreaId;
@@ -834,13 +965,19 @@ function unlockPageForColorPopup() {
   window.scrollTo(0, _colorPopupScrollY);
 }
 
+function onColorPopupKeydown(event) {
+  if (event.key === "Escape") closeColorPickerPopup();
+}
+
 function openColorPickerPopup() {
-  if (_colorPopup) return _colorPopup.show();
+  // pointerup, touchend ve click aynı dokunuşta art arda tetiklenebilir; açık popup yeniden kurulmaz.
+  if (_colorPopup) return _colorPopup;
 
   const overlay = document.createElement("div");
   overlay.className = "color-popup-overlay";
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Renk seçin");
 
   const panel = document.createElement("div");
   panel.className = "color-popup";
@@ -853,14 +990,18 @@ function openColorPickerPopup() {
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "icon-button";
+  closeBtn.setAttribute("aria-label", "Kapat");
   closeBtn.innerHTML =
     '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>';
   closeBtn.addEventListener("click", closeColorPickerPopup);
   header.append(title, closeBtn);
 
   const search = document.createElement("input");
+  search.type = "search";
   search.className = "color-popup-search";
   search.placeholder = "Ara (isim, kod veya hex)";
+  search.autocomplete = "off";
+  search.setAttribute("aria-label", "Renk ara");
 
   const count = document.createElement("div");
   count.className = "color-popup-count";
@@ -889,9 +1030,7 @@ function openColorPickerPopup() {
     if (ev.target === overlay) closeColorPickerPopup();
   });
 
-  document.addEventListener("keydown", function esc(e) {
-    if (e.key === "Escape") closeColorPickerPopup();
-  });
+  document.addEventListener("keydown", onColorPopupKeydown);
 
   _colorPopup = {
     overlay,
@@ -915,6 +1054,7 @@ function openColorPickerPopup() {
 
 function closeColorPickerPopup() {
   if (!_colorPopup) return;
+  document.removeEventListener("keydown", onColorPopupKeydown);
   _colorPopup.overlay.remove();
   _colorPopup = null;
   unlockPageForColorPopup();
@@ -966,9 +1106,7 @@ function stopPlayback() {
 }
 
 function refreshIcons() {
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
+  createIcons({ icons: ICONS });
 }
 
 function loadFlagAsset() {
@@ -993,14 +1131,25 @@ async function loadInitialProject() {
   if (state.isAdminRoute) {
     await refreshSession();
     if (state.isAuthenticated) {
-      await loadAdminImages();
-      const selectedId = new URLSearchParams(window.location.search).get("image");
-      await selectAdminImage(selectedId || DEFAULT_IMAGE_ID, false);
+      await loadAdminProject(false);
       return;
     }
   }
 
   await loadPublicImage(getRequestedImageId());
+}
+
+async function loadAdminProject(updateUrl) {
+  await loadAdminImages();
+  const selectedId = new URLSearchParams(window.location.search).get("image");
+  try {
+    await selectAdminImage(selectedId || DEFAULT_IMAGE_ID, updateUrl);
+  } catch (error) {
+    if (!selectedId || selectedId === DEFAULT_IMAGE_ID) throw error;
+    // Bağlantıdaki resim silinmiş veya hatalı olabilir; varsayılan resme dönülür.
+    await selectAdminImage(DEFAULT_IMAGE_ID, true);
+    setSaveStatus("İstenen resim bulunamadı, varsayılan resim açıldı", true);
+  }
 }
 
 async function refreshSession() {
@@ -1099,7 +1248,11 @@ function normalizeImageSettings(image) {
 function getRequestedImageId() {
   const segment = window.location.pathname.split("/").filter(Boolean)[0];
   if (!segment || segment === "admin") return DEFAULT_IMAGE_ID;
-  return decodeURIComponent(segment);
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return DEFAULT_IMAGE_ID;
+  }
 }
 
 function replaceImageInList(image) {
@@ -1125,7 +1278,9 @@ async function apiRequest(path, options = {}) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error || "İstek tamamlanamadı");
+    const error = new Error(payload.error || "İstek tamamlanamadı");
+    error.status = response.status;
+    throw error;
   }
   return payload;
 }
@@ -1219,10 +1374,14 @@ async function completeAuthentication(session) {
   state.isAuthenticated = Boolean(session.authenticated);
   syncAdminUi();
   setLoginStatus("Resimler yükleniyor");
-  await loadAdminImages();
-  await selectAdminImage(DEFAULT_IMAGE_ID);
+  try {
+    await loadAdminProject(true);
+    setLoginStatus("");
+  } catch (error) {
+    setLoginStatus("");
+    setSaveStatus(error.message || "Resimler yüklenemedi", true);
+  }
   syncAdminUi();
-  setLoginStatus("");
 }
 
 function showAuthView(view) {
@@ -1239,15 +1398,27 @@ function showAuthView(view) {
 }
 
 async function handleLogout() {
+  if (state.saveTimer) {
+    window.clearTimeout(state.saveTimer);
+    state.saveTimer = null;
+    await persistCurrentImage();
+  }
   await apiRequest("/api/logout", { method: "POST" }).catch(() => {});
   state.isAuthenticated = false;
   state.editMode = false;
   syncAdminUi();
+  renderAreaControls();
+  renderCanvas();
+  showAuthView("login");
 }
 
 async function handleUpload(event) {
   event.preventDefault();
-  if (!canEditProject() || !dom.uploadInput.files.length) return;
+  if (!canEditProject()) return;
+  if (!dom.uploadInput.files.length) {
+    setSaveStatus("Önce bir resim seçin", true);
+    return;
+  }
 
   const formData = new FormData();
   formData.append("image", dom.uploadInput.files[0]);
@@ -1261,15 +1432,34 @@ async function handleUpload(event) {
     const normalized = normalizeImageSettings(image);
     replaceImageInList(normalized);
     dom.uploadInput.value = "";
+    syncUploadLabel();
     await selectAdminImage(normalized.id);
     setSaveStatus("Yüklendi");
   } catch (error) {
+    if (error.status === 401) {
+      handleSessionExpired();
+      return;
+    }
     setSaveStatus(error.message || "Yüklenemedi", true);
   }
 }
 
+function syncUploadLabel() {
+  const label = document.querySelector("#uploadLabel");
+  if (!label) return;
+  label.textContent = dom.uploadInput?.files?.[0]?.name || "Resim seç";
+}
+
 async function generateAiMask() {
   if (!canEditProject() || !state.currentImage) return;
+  if (
+    state.masks.length &&
+    !window.confirm(
+      "AI yeni maske oluşturunca mevcut boya alanları değiştirilecek. Devam edilsin mi?"
+    )
+  ) {
+    return;
+  }
 
   dom.aiMaskButton.disabled = true;
   setSaveStatus("AI maske oluşturuyor");
@@ -1298,6 +1488,10 @@ async function generateAiMask() {
     renderAdminImageList();
     setSaveStatus(notes ? `AI maske kaydedildi: ${notes}` : "AI maske kaydedildi");
   } catch (error) {
+    if (error.status === 401) {
+      handleSessionExpired();
+      return;
+    }
     setSaveStatus(error.message || "AI maske oluşturulamadı", true);
   } finally {
     dom.aiMaskButton.disabled = false;
@@ -1501,8 +1695,13 @@ function renderCanvas() {
   state.canvasHeight = Math.round(imageHeight * scale);
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  dom.canvas.width = Math.round(state.canvasWidth * dpr);
-  dom.canvas.height = Math.round(state.canvasHeight * dpr);
+  const pixelWidth = Math.round(state.canvasWidth * dpr);
+  const pixelHeight = Math.round(state.canvasHeight * dpr);
+  // Boyut atamak tuvali sıfırlayıp yeniden ayırdığı için yalnızca değiştiğinde yapılır.
+  if (dom.canvas.width !== pixelWidth || dom.canvas.height !== pixelHeight) {
+    dom.canvas.width = pixelWidth;
+    dom.canvas.height = pixelHeight;
+  }
   dom.canvas.style.aspectRatio = `${state.canvasWidth} / ${state.canvasHeight}`;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, state.canvasWidth, state.canvasHeight);

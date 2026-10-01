@@ -41,13 +41,14 @@ test("renders palette and painted canvas", async ({ page }) => {
   await page.screenshot({ path: "test-results/smoke.png", fullPage: true });
 });
 
-test("mobile color picker stays on top of the preview", async ({ browser }) => {
-  const context = await browser.newContext({ ...devices["iPhone 13"] });
+test("mobile color picker stays on top of the preview", async ({ browser, baseURL }) => {
+  const { defaultBrowserType: _ignored, ...iphone } = devices["iPhone 13"];
+  const context = await browser.newContext({ ...iphone, baseURL });
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
-  await page.goto("http://localhost:5174/", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
 
   const mobileLayout = await page.evaluate(() => {
     const canvas = document.querySelector("#paintCanvas");

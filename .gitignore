@@ -1,6 +1,14 @@
 node_modules/
 .next/
+out/
 dist/
 test-results/
 playwright-report/
-.env*.local
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Ortam değişkenleri gizli bilgi içerir; yalnızca örnek dosya depoya girer.
+.env
+.env.*
+!.env.example

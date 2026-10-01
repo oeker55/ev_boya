@@ -40,20 +40,44 @@ async function main() {
 
 async function seedAdmin(db) {
   const users = db.collection("users");
-  await users.createIndex({ username: 1 }, { unique: true });
+  await users.createIndex(
+    { email: 1 },
+    { unique: true, partialFilterExpression: { email: { $type: "string" } } }
+  );
 
-  if ((await users.countDocuments({}, { limit: 1 })) > 0) return;
+  const email = String(process.env.ADMIN_EMAIL || "")
+    .trim()
+    .toLocaleLowerCase("en-US");
+  const password = process.env.ADMIN_PASSWORD || "";
 
-  const username = process.env.ADMIN_USERNAME || "admin";
-  const password = process.env.ADMIN_PASSWORD || "evrenk2026";
+  if (!email || !password) {
+    console.log(
+      "ADMIN_EMAIL/ADMIN_PASSWORD tanımlı değil, yönetici hesabı oluşturma atlandı. " +
+        "İlk hesabı /admin ekranından kayıt olarak da oluşturabilirsiniz."
+    );
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("ADMIN_EMAIL geçerli bir e-posta adresi olmalı");
+  }
+  if (password.length < 8) {
+    throw new Error("ADMIN_PASSWORD en az 8 karakter olmalı");
+  }
+  if (await users.findOne({ email })) {
+    console.log(`Yönetici hesabı zaten var: ${email}`);
+    return;
+  }
+
   await users.insertOne({
-    username,
+    email,
+    // Eski kurulumlarda kalan benzersiz username indeksleriyle uyumluluğu korur.
+    username: email,
     passwordHash: await hashPassword(password),
     role: "admin",
     createdAt: new Date(),
     updatedAt: new Date(),
   });
-  console.log(`Admin kullanici olusturuldu: ${username}`);
+  console.log(`Yönetici hesabı oluşturuldu: ${email}`);
 }
 
 async function seedImages(db) {
@@ -77,6 +101,7 @@ async function seedImages(db) {
       src: String(image.src || "/ev.jpg"),
       opacity: clamp(Number(image.opacity ?? 0.4), 0.2, 1),
       masks: Array.isArray(image.masks) ? image.masks : [],
+      overlays: Array.isArray(image.overlays) ? image.overlays : [],
       createdAt: image.createdAt ? new Date(image.createdAt) : new Date(),
       updatedAt: new Date(),
     };

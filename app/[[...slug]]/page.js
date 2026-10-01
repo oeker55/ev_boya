@@ -67,8 +67,12 @@ export default function PaintPage() {
             <form id="uploadForm" className="upload-form">
               <label className="file-drop">
                 <i data-lucide="upload" aria-hidden="true" />
-                <span>Resim seç</span>
-                <input id="uploadInput" type="file" accept="image/*" />
+                <span id="uploadLabel">Resim seç</span>
+                <input
+                  id="uploadInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                />
               </label>
               <button className="button button-primary" type="submit">
                 <i data-lucide="cloud-upload" aria-hidden="true" />
@@ -77,7 +81,7 @@ export default function PaintPage() {
             </form>
             <button className="button ai-mask-button" id="aiMaskButton" type="button">
               <i data-lucide="sparkles" aria-hidden="true" />
-              <span>AI ile maske oluÅŸtur</span>
+              <span>AI ile maske oluştur</span>
             </button>
             <div id="imageList" className="image-list" />
             <output id="saveStatus" className="save-status" />
@@ -132,7 +136,7 @@ export default function PaintPage() {
                 aria-pressed="false"
               >
                 <i data-lucide="square" aria-hidden="true" />
-                <span>Ikinci renk</span>
+                <span>İkinci renk</span>
               </button>
             </div>
             <div className="step-row">
@@ -309,7 +313,7 @@ export default function PaintPage() {
                 <i data-lucide="clipboard" aria-hidden="true" />
               </button>
             </div>
-            <div className="edit-tools flag-tools admin-only" aria-label="Bayrak araÃ§larÄ±">
+            <div className="edit-tools flag-tools admin-only" aria-label="Bayrak araçları">
               <button
                 className="icon-button"
                 id="addFlagButton"
@@ -323,8 +327,8 @@ export default function PaintPage() {
                 className="icon-button"
                 id="flagSmallerButton"
                 type="button"
-                aria-label="BayraÄŸÄ± kÃ¼Ã§Ã¼lt"
-                title="BayraÄŸÄ± kÃ¼Ã§Ã¼lt"
+                aria-label="Bayrağı küçült"
+                title="Bayrağı küçült"
               >
                 <i data-lucide="minus" aria-hidden="true" />
               </button>
@@ -332,8 +336,8 @@ export default function PaintPage() {
                 className="icon-button"
                 id="flagLargerButton"
                 type="button"
-                aria-label="BayraÄŸÄ± bÃ¼yÃ¼t"
-                title="BayraÄŸÄ± bÃ¼yÃ¼t"
+                aria-label="Bayrağı büyüt"
+                title="Bayrağı büyüt"
               >
                 <i data-lucide="plus" aria-hidden="true" />
               </button>
@@ -341,8 +345,8 @@ export default function PaintPage() {
                 className="icon-button"
                 id="deleteFlagButton"
                 type="button"
-                aria-label="BayraÄŸÄ± sil"
-                title="BayraÄŸÄ± sil"
+                aria-label="Bayrağı sil"
+                title="Bayrağı sil"
               >
                 <i data-lucide="trash-2" aria-hidden="true" />
               </button>

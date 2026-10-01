@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../lib/auth";
+import { handleRouteError, jsonError, readJsonBody } from "../../../../lib/http";
 import { findImage, updateImage } from "../../../../lib/image-store";
 
 export const runtime = "nodejs";
@@ -11,31 +12,31 @@ export async function GET(_request, context) {
     const image = await findImage(id);
 
     if (!image) {
-      return NextResponse.json({ error: "Resim bulunamadi" }, { status: 404 });
+      return jsonError("Resim bulunamadı", 404);
     }
 
     return NextResponse.json({ image });
   } catch (error) {
-    return NextResponse.json({ error: error.message || "Resim alinamadi" }, { status: 500 });
+    return handleRouteError(error, "Resim alınamadı", "images:get");
   }
 }
 
 export async function PUT(request, context) {
   if (!requireAdmin(request)) {
-    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+    return jsonError("Yetkisiz", 401);
   }
 
   try {
     const { id } = await context.params;
-    const payload = await request.json().catch(() => ({}));
+    const payload = await readJsonBody(request);
     const image = await updateImage(id, payload);
 
     if (!image) {
-      return NextResponse.json({ error: "Resim bulunamadi" }, { status: 404 });
+      return jsonError("Resim bulunamadı", 404);
     }
 
     return NextResponse.json({ image });
   } catch (error) {
-    return NextResponse.json({ error: error.message || "Resim kaydedilemedi" }, { status: 500 });
+    return handleRouteError(error, "Resim kaydedilemedi", "images:update");
   }
 }

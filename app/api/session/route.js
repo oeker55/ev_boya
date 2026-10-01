@@ -6,8 +6,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request) {
   const session = getSessionFromRequest(request);
-  return NextResponse.json({
-    authenticated: Boolean(session),
-    email: session?.email || null,
-  });
+  return NextResponse.json(
+    {
+      authenticated: Boolean(session),
+      email: session?.email || null,
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

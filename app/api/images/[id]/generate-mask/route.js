@@ -2,11 +2,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../../lib/auth";
+import { handleRouteError, HttpError, jsonError } from "../../../../../lib/http";
 import { findImage, getUploadStream, updateImage } from "../../../../../lib/image-store";
+import { enforceRateLimits } from "../../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+const OPENAI_TIMEOUT_MS = 55_000;
 
 const MASK_SCHEMA = {
   type: "object",
@@ -72,19 +76,26 @@ const MASK_SCHEMA = {
 };
 
 export async function POST(request, context) {
-  if (!requireAdmin(request)) {
-    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  const session = requireAdmin(request);
+  if (!session) {
+    return jsonError("Yetkisiz", 401);
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: "OPENAI_API_KEY ortam degiskeni eksik" }, { status: 500 });
+    console.error("[generate-mask] OPENAI_API_KEY environment variable is missing");
+    return jsonError("AI maske servisi yapılandırılmamış", 503);
   }
 
   try {
+    const limited = await enforceRateLimits([
+      { key: `ai-mask:user:${session.userId}`, limit: 30, windowMs: 60 * 60 * 1000 },
+    ]);
+    if (limited) return limited;
+
     const { id } = await context.params;
     const image = await findImage(id);
     if (!image) {
-      return NextResponse.json({ error: "Resim bulunamadi" }, { status: 404 });
+      return jsonError("Resim bulunamadı", 404);
     }
 
     const imageData = await loadImageDataUrl(image.src);
@@ -108,10 +119,7 @@ export async function POST(request, context) {
       notes: generated.notes,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message || "AI maske olusturulamadi" },
-      { status: error.status || 500 }
-    );
+    return handleRouteError(error, "AI maske oluşturulamadı", "generate-mask");
   }
 }
 
@@ -153,21 +161,38 @@ async function generateMasksWithOpenAI(image, imageData) {
         },
       },
     }),
+    signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
+  }).catch((error) => {
+    if (error?.name === "TimeoutError") {
+      throw new HttpError("AI servisi zamanında yanıt vermedi, lütfen tekrar deneyin", 504);
+    }
+    throw error;
   });
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw Object.assign(new Error(payload.error?.message || "OpenAI istegi basarisiz"), {
-      status: response.status,
-    });
+    // OpenAI'nin 401/429 gibi kodları istemciye kendi oturum hatası gibi görünmemeli.
+    console.error("[generate-mask] OpenAI request failed", response.status, payload.error);
+    throw new HttpError(
+      response.status === 429
+        ? "AI servisi şu anda yoğun, lütfen biraz sonra tekrar deneyin"
+        : "AI servisi isteği tamamlayamadı",
+      502
+    );
   }
 
   const text = extractOutputText(payload);
-  if (!text) {
-    throw new Error("OpenAI bos maske yaniti dondu");
+  let result;
+  try {
+    result = JSON.parse(text);
+  } catch {
+    result = null;
+  }
+  if (!Array.isArray(result?.masks) || !result.masks.length) {
+    throw new HttpError("AI geçerli bir maske döndürmedi, lütfen tekrar deneyin", 502);
   }
 
-  return JSON.parse(text);
+  return result;
 }
 
 function buildSystemPrompt() {
@@ -180,7 +205,7 @@ function buildSystemPrompt() {
     "Prefer one accurate outer polygon with holes when the facade is continuous. Use multiple masks only for clearly separated paintable wall planes.",
     "Keep polygons practical for manual editing: enough points to follow the facade, but avoid excessive tiny zigzags.",
     "If uncertain, choose conservative masks that avoid painting non-wall areas.",
-  ].join("\\n");
+  ].join("\n");
 }
 
 async function loadImageDataUrl(src) {
@@ -191,7 +216,7 @@ async function loadImageDataUrl(src) {
     const fileId = src.split("/").pop();
     const upload = await getUploadStream(fileId);
     if (!upload) {
-      throw Object.assign(new Error("Upload dosyasi bulunamadi"), { status: 404 });
+      throw new HttpError("Yüklenen dosya bulunamadı", 404);
     }
     buffer = await streamToBuffer(upload.stream);
     contentType = upload.file.contentType || contentType;
@@ -200,7 +225,7 @@ async function loadImageDataUrl(src) {
     buffer = await fs.readFile(filePath);
     contentType = getContentType(filePath);
   } else {
-    throw Object.assign(new Error("Desteklenmeyen resim kaynagi"), { status: 400 });
+    throw new HttpError("Desteklenmeyen resim kaynağı", 400);
   }
 
   return `data:${contentType};base64,${buffer.toString("base64")}`;
